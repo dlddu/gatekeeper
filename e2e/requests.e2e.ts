@@ -19,7 +19,7 @@ import { cleanupTestData } from './helpers/db';
  */
 
 // TODO: Activate when DLD-647 is implemented
-test.describe.skip('POST /api/requests (승인 요청 생성 - 공개 API)', () => {
+test.describe('POST /api/requests (승인 요청 생성 - 공개 API)', () => {
   const createdExternalIds: string[] = [];
 
   test.afterEach(async () => {
@@ -123,7 +123,7 @@ test.describe.skip('POST /api/requests (승인 요청 생성 - 공개 API)', () 
 });
 
 // TODO: Activate when DLD-647 is implemented
-test.describe.skip('GET /api/requests (요청 목록 조회 - 공개 API)', () => {
+test.describe('GET /api/requests (요청 목록 조회 - 공개 API)', () => {
   test('토큰 없이 요청 목록을 조회할 수 있다 (happy path)', async ({ request }) => {
     const response = await request.get('/api/requests');
 
@@ -177,7 +177,7 @@ test.describe.skip('GET /api/requests (요청 목록 조회 - 공개 API)', () =
 });
 
 // TODO: Activate when DLD-647 is implemented
-test.describe.skip('GET /api/requests/:id (단건 조회)', () => {
+test.describe('GET /api/requests/:id (단건 조회)', () => {
   test('존재하는 Request ID로 단건 조회하면 200을 반환한다 (happy path)', async ({
     request,
   }) => {
@@ -206,7 +206,7 @@ test.describe.skip('GET /api/requests/:id (단건 조회)', () => {
 });
 
 // TODO: Activate when DLD-647 is implemented
-test.describe.skip('PATCH /api/requests/:id/approve (승인)', () => {
+test.describe('PATCH /api/requests/:id/approve (승인)', () => {
   const createdExternalIds: string[] = [];
 
   test.afterEach(async () => {
@@ -292,7 +292,7 @@ test.describe.skip('PATCH /api/requests/:id/approve (승인)', () => {
 });
 
 // TODO: Activate when DLD-647 is implemented
-test.describe.skip('PATCH /api/requests/:id/reject (거절)', () => {
+test.describe('PATCH /api/requests/:id/reject (거절)', () => {
   const createdExternalIds: string[] = [];
 
   test.afterEach(async () => {
@@ -362,7 +362,7 @@ test.describe.skip('PATCH /api/requests/:id/reject (거절)', () => {
 });
 
 // TODO: Activate when DLD-650 is implemented
-test.describe.skip('POST /api/requests (확인 요청 생성 - API Key 인증)', () => {
+test.describe('POST /api/requests (확인 요청 생성 - API Key 인증)', () => {
   /**
    * DLD-650: 작업 3-1: [확인 요청 생성] e2e 테스트 작성 (skipped)
    * 부모 이슈: DLD-645 (Gatekeeper — 승인 게이트웨이 서비스)

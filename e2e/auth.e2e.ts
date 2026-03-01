@@ -5,18 +5,16 @@ import { TEST_USERS, login, loginAsAdmin, withAuthHeader } from './helpers/auth'
  * 인증 API E2E 테스트
  *
  * DLD-647: e2e 테스트 환경 구성
+ * DLD-649: 작업 2-2: [사용자 인증] 구현 및 e2e 테스트 활성화
  * 부모 이슈: DLD-645 (Gatekeeper — 승인 게이트웨이 서비스)
  *
  * 커버리지:
  * - POST /api/auth/login (로그인)
  * - JWT 토큰 기반 인증 미들웨어
  * - 공개/보호 경로 접근 제어
- *
- * TODO: DLD-647 구현 완료 후 test.describe.skip → test.describe 로 변경
  */
 
-// TODO: Activate when DLD-647 is implemented
-test.describe.skip('POST /api/auth/login', () => {
+test.describe('POST /api/auth/login', () => {
   test('올바른 자격증명으로 로그인하면 JWT 토큰을 반환한다 (happy path)', async ({ request }) => {
     const response = await request.post('/api/auth/login', {
       data: {
@@ -100,8 +98,7 @@ test.describe.skip('POST /api/auth/login', () => {
   });
 });
 
-// TODO: Activate when DLD-648 is implemented
-test.describe.skip('로그인 UI 플로우', () => {
+test.describe('로그인 UI 플로우', () => {
   test('로그인 페이지에 접속하면 폼 요소가 렌더링된다 (happy path)', async ({ page }) => {
     await page.goto('/login');
 
@@ -196,8 +193,7 @@ test.describe.skip('로그인 UI 플로우', () => {
   });
 });
 
-// TODO: Activate when DLD-647 is implemented
-test.describe.skip('인증 미들웨어 (JWT 보호 경로)', () => {
+test.describe('인증 미들웨어 (JWT 보호 경로)', () => {
   test('토큰 없이 보호된 API 접근하면 401을 반환한다 (error case)', async ({ request }) => {
     const response = await request.get('/api/users');
 

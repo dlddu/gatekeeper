@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test';
-import { TEST_USERS, login, loginAsAdmin, withAuthHeader } from './helpers/auth';
+import { TEST_USERS, loginAsAdmin, withAuthHeader } from './helpers/auth';
 
 /**
  * 인증 API E2E 테스트

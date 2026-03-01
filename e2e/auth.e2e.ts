@@ -100,6 +100,102 @@ test.describe.skip('POST /api/auth/login', () => {
   });
 });
 
+// TODO: Activate when DLD-648 is implemented
+test.describe.skip('로그인 UI 플로우', () => {
+  test('로그인 페이지에 접속하면 폼 요소가 렌더링된다 (happy path)', async ({ page }) => {
+    await page.goto('/login');
+
+    await expect(page.getByRole('heading', { name: 'Gatekeeper' })).toBeVisible();
+    await expect(page.getByLabel('아이디')).toBeVisible();
+    await expect(page.getByLabel('비밀번호')).toBeVisible();
+    await expect(page.getByRole('button', { name: '로그인' })).toBeVisible();
+  });
+
+  test('올바른 자격증명으로 로그인하면 대기 목록 페이지로 리다이렉트된다 (happy path)', async ({
+    page,
+  }) => {
+    await page.goto('/login');
+
+    await page.getByLabel('아이디').fill(TEST_USERS.admin.username);
+    await page.getByLabel('비밀번호').fill(TEST_USERS.admin.password);
+    await page.getByRole('button', { name: '로그인' }).click();
+
+    await expect(page).toHaveURL('/requests');
+  });
+
+  test('잘못된 비밀번호로 로그인하면 인라인 에러 메시지가 표시된다 (error case)', async ({
+    page,
+  }) => {
+    await page.goto('/login');
+
+    await page.getByLabel('아이디').fill(TEST_USERS.admin.username);
+    await page.getByLabel('비밀번호').fill('wrong-password');
+    await page.getByRole('button', { name: '로그인' }).click();
+
+    await expect(
+      page.getByText('아이디 또는 비밀번호가 올바르지 않습니다')
+    ).toBeVisible();
+    await expect(page).toHaveURL('/login');
+  });
+
+  test('존재하지 않는 아이디로 로그인하면 인라인 에러 메시지가 표시된다 (error case)', async ({
+    page,
+  }) => {
+    await page.goto('/login');
+
+    await page.getByLabel('아이디').fill('nonexistent-user');
+    await page.getByLabel('비밀번호').fill('anypassword');
+    await page.getByRole('button', { name: '로그인' }).click();
+
+    await expect(
+      page.getByText('아이디 또는 비밀번호가 올바르지 않습니다')
+    ).toBeVisible();
+  });
+
+  test('엔터 키로 로그인 폼을 제출할 수 있다 (happy path)', async ({ page }) => {
+    await page.goto('/login');
+
+    await page.getByLabel('아이디').fill(TEST_USERS.user.username);
+    await page.getByLabel('비밀번호').fill(TEST_USERS.user.password);
+    await page.getByLabel('비밀번호').press('Enter');
+
+    await expect(page).toHaveURL('/requests');
+  });
+
+  test('로그인 버튼 클릭 시 로딩 상태(스피너)가 표시되고 버튼이 비활성화된다 (happy path)', async ({
+    page,
+  }) => {
+    await page.goto('/login');
+
+    await page.getByLabel('아이디').fill(TEST_USERS.admin.username);
+    await page.getByLabel('비밀번호').fill(TEST_USERS.admin.password);
+
+    // 로그인 버튼 클릭 직후 로딩 상태 확인 (응답 대기 중 검증)
+    const loginButton = page.getByRole('button', { name: '로그인' });
+    await loginButton.click();
+
+    // 버튼이 disabled 상태가 되어야 함
+    await expect(loginButton).toBeDisabled();
+  });
+
+  test('이미 로그인된 사용자가 로그인 페이지에 접근하면 대기 목록으로 리다이렉트된다 (edge case)', async ({
+    page,
+  }) => {
+    // 먼저 로그인하여 세션 획득
+    await page.goto('/login');
+    await page.getByLabel('아이디').fill(TEST_USERS.admin.username);
+    await page.getByLabel('비밀번호').fill(TEST_USERS.admin.password);
+    await page.getByRole('button', { name: '로그인' }).click();
+    await expect(page).toHaveURL('/requests');
+
+    // 로그인 상태에서 /login 재접근
+    await page.goto('/login');
+
+    // 대기 목록으로 리다이렉트되어야 함
+    await expect(page).toHaveURL('/requests');
+  });
+});
+
 // TODO: Activate when DLD-647 is implemented
 test.describe.skip('인증 미들웨어 (JWT 보호 경로)', () => {
   test('토큰 없이 보호된 API 접근하면 401을 반환한다 (error case)', async ({ request }) => {

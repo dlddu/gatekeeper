@@ -34,14 +34,14 @@ export default function LoginPage() {
         const data = await response.json();
         localStorage.setItem('token', data.token);
         router.push('/requests');
+        return; // 성공 시 isLoading 해제하지 않음 (페이지 이동 중 버튼이 disabled 유지)
       } else {
         setError('아이디 또는 비밀번호가 올바르지 않습니다');
       }
     } catch {
       setError('아이디 또는 비밀번호가 올바르지 않습니다');
-    } finally {
-      setIsLoading(false);
     }
+    setIsLoading(false);
   }
 
   return (

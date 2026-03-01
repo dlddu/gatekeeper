@@ -25,14 +25,15 @@ export async function middleware(request: NextRequest): Promise<NextResponse> {
   // API 경로에 대한 JWT 인증
   if (pathname.startsWith('/api/')) {
     const authHeader = request.headers.get('authorization');
-    const token = authHeader?.replace('Bearer ', '');
 
-    if (!token) {
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
       return NextResponse.json(
         { error: 'Unauthorized: No token provided' },
         { status: 401 }
       );
     }
+
+    const token = authHeader.slice('Bearer '.length);
 
     try {
       await verifyToken(token);

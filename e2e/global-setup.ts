@@ -84,6 +84,18 @@ async function seedDatabase(databaseUrl: string): Promise<void> {
       },
     });
 
+    // 미들웨어 공개 경로 테스트용 사용자 생성 (e2e/auth.e2e.ts:227)
+    const testPasswordHash = await bcrypt.hash('test', 10);
+    await prisma.user.upsert({
+      where: { username: 'test' },
+      update: {},
+      create: {
+        username: 'test',
+        passwordHash: testPasswordHash,
+        displayName: 'Middleware Test User',
+      },
+    });
+
     // 샘플 PENDING Request 생성
     await prisma.request.upsert({
       where: { externalId: 'e2e-pending-001' },

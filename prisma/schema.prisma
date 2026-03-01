@@ -1,0 +1,52 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+}
+
+model User {
+  id            String            @id @default(cuid())
+  username      String            @unique
+  passwordHash  String
+  displayName   String
+  createdAt     DateTime          @default(now())
+  updatedAt     DateTime          @updatedAt
+  processedRequests Request[]     @relation("ProcessedBy")
+  pushSubscriptions PushSubscription[]
+}
+
+model Request {
+  id             String    @id @default(cuid())
+  externalId     String    @unique
+  context        String
+  requesterName  String
+  status         RequestStatus @default(PENDING)
+  timeoutSeconds Int?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+  processedAt    DateTime?
+  processedById  String?
+  processedBy    User?     @relation("ProcessedBy", fields: [processedById], references: [id])
+}
+
+model PushSubscription {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  endpoint  String   @unique
+  p256dh    String
+  auth      String
+  createdAt DateTime @default(now())
+}
+
+enum RequestStatus {
+  PENDING
+  APPROVED
+  REJECTED
+  EXPIRED
+}

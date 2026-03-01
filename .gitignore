@@ -42,5 +42,12 @@ next-env.d.ts
 # Testing
 coverage/
 
+# Playwright E2E
+playwright-report/
+test-results/
+e2e-test.db
+e2e-test.db-wal
+e2e-test.db-shm
+
 # Prisma generated
 prisma/migrations/

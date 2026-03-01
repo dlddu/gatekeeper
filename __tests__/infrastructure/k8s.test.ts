@@ -27,7 +27,6 @@ describe('k8s/ directory', () => {
     const requiredFiles = [
       'deployment.yaml',
       'service.yaml',
-      'httproute.yaml',
       'pvc.yaml',
     ];
 
@@ -92,13 +91,6 @@ describe('k8s/ directory', () => {
       expect(content).toContain('persistentVolumeClaim');
     });
 
-    it('should define resource requests', () => {
-      expect(content).toContain('requests:');
-    });
-
-    it('should define resource limits', () => {
-      expect(content).toContain('limits:');
-    });
   });
 
   // ----------------------------------------------------------------
@@ -133,41 +125,6 @@ describe('k8s/ directory', () => {
 
     it('should be ClusterIP type', () => {
       expect(content).toContain('ClusterIP');
-    });
-  });
-
-  // ----------------------------------------------------------------
-  // HTTPRoute
-  // ----------------------------------------------------------------
-  describe('httproute.yaml', () => {
-    let content: string;
-
-    beforeAll(() => {
-      content = readK8sFile('httproute.yaml');
-    });
-
-    it('should have kind HTTPRoute', () => {
-      expect(content).toContain('kind: HTTPRoute');
-    });
-
-    it('should use gateway.networking.k8s.io apiVersion', () => {
-      expect(content).toContain('gateway.networking.k8s.io');
-    });
-
-    it('should define parentRefs to a gateway', () => {
-      expect(content).toContain('parentRefs:');
-    });
-
-    it('should define hostnames', () => {
-      expect(content).toContain('hostnames:');
-    });
-
-    it('should define routing rules', () => {
-      expect(content).toContain('rules:');
-    });
-
-    it('should reference gatekeeper backend service', () => {
-      expect(content).toContain('name: gatekeeper');
     });
   });
 

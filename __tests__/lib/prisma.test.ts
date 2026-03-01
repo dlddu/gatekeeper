@@ -17,7 +17,7 @@ describe('Prisma Client singleton', () => {
   });
 
   afterEach(() => {
-    process.env.NODE_ENV = originalNodeEnv;
+    (process.env as Record<string, string>).NODE_ENV = originalNodeEnv as string;
     if (originalDatabaseUrl !== undefined) {
       process.env.DATABASE_URL = originalDatabaseUrl;
     } else {
@@ -101,7 +101,7 @@ describe('Prisma Client singleton', () => {
   describe('singleton behavior', () => {
     it('should return the same instance on multiple imports in non-production', async () => {
       // Arrange
-      process.env.NODE_ENV = 'development';
+      (process.env as Record<string, string>).NODE_ENV = 'development';
       process.env.DATABASE_URL = 'file::memory:';
 
       // Act - 같은 모듈을 두 번 import해도 동일한 인스턴스를 반환해야 함
@@ -114,7 +114,7 @@ describe('Prisma Client singleton', () => {
 
     it('should cache instance on globalThis in non-production environment', async () => {
       // Arrange
-      process.env.NODE_ENV = 'development';
+      (process.env as Record<string, string>).NODE_ENV = 'development';
       process.env.DATABASE_URL = 'file::memory:';
 
       // Act

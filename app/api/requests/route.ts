@@ -26,12 +26,18 @@ export async function POST(request: NextRequest): Promise<Response> {
   }
 
   try {
+    const now = new Date();
+    const expiresAt = timeoutSeconds != null
+      ? new Date(now.getTime() + timeoutSeconds * 1000)
+      : null;
+
     const created = await prisma.request.create({
       data: {
         externalId,
         context,
         requesterName,
         timeoutSeconds: timeoutSeconds ?? null,
+        expiresAt,
       },
     });
 
@@ -43,6 +49,7 @@ export async function POST(request: NextRequest): Promise<Response> {
         requesterName: created.requesterName,
         status: created.status,
         timeoutSeconds: created.timeoutSeconds,
+        expiresAt: created.expiresAt,
         createdAt: created.createdAt,
       }),
       {

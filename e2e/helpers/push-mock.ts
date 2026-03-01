@@ -116,7 +116,7 @@ export async function mockBrowserPushAPIs(page: Page): Promise<void> {
     }
 
     // window에 직접 모킹 플래그 노출 (테스트에서 확인 가능)
-    (window as Window & { __E2E_PUSH_MOCKED__: boolean }).__E2E_PUSH_MOCKED__ = true;
+    (window as unknown as Window & { __E2E_PUSH_MOCKED__: boolean }).__E2E_PUSH_MOCKED__ = true;
   }, MOCK_PUSH_SUBSCRIPTION);
 }
 

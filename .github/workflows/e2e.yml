@@ -1,0 +1,89 @@
+name: E2E Tests
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  e2e:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Generate Prisma Client
+        run: npx prisma generate
+        env:
+          DATABASE_URL: file:./e2e-test.db
+
+      # Playwright 브라우저 캐시 (CI 빌드 시간 단축)
+      - name: Get Playwright version
+        id: playwright-version
+        run: |
+          echo "version=$(node -p "require('./node_modules/@playwright/test/package.json').version")" >> "$GITHUB_OUTPUT"
+
+      - name: Cache Playwright browsers
+        id: playwright-cache
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ runner.os }}-${{ steps.playwright-version.outputs.version }}
+          restore-keys: |
+            playwright-${{ runner.os }}-
+
+      - name: Install Playwright browsers
+        if: steps.playwright-cache.outputs.cache-hit != 'true'
+        run: npx playwright install --with-deps chromium
+
+      - name: Install Playwright system dependencies
+        if: steps.playwright-cache.outputs.cache-hit == 'true'
+        run: npx playwright install-deps chromium
+
+      # Next.js 프로덕션 빌드 (webServer 설정에서 `npm run start` 사용)
+      - name: Build Next.js application
+        run: npm run build
+        env:
+          DATABASE_URL: file:./e2e-test.db
+          JWT_SECRET: ${{ secrets.E2E_JWT_SECRET || 'e2e-test-secret-key-must-be-at-least-32-chars!!' }}
+          VAPID_PUBLIC_KEY: ${{ secrets.E2E_VAPID_PUBLIC_KEY || 'BEl62iUYgUivxIkv69yViEuiBIa-Ib9-SkvMeAtA3LFgDzkrxZJjSgSnfckjBJuBkr3qBUYIHBQFLXYp5Nksh8U' }}
+          VAPID_PRIVATE_KEY: ${{ secrets.E2E_VAPID_PRIVATE_KEY || 'UUxI4O8-HoGs86_GBRhFxGMpHMTKJmEXAZMFnTa5YCc' }}
+          VAPID_SUBJECT: ${{ secrets.E2E_VAPID_SUBJECT || 'mailto:e2e-test@example.com' }}
+
+      - name: Run E2E tests
+        run: npm run test:e2e
+        env:
+          CI: 'true'
+          DATABASE_URL: file:./e2e-test.db
+          JWT_SECRET: ${{ secrets.E2E_JWT_SECRET || 'e2e-test-secret-key-must-be-at-least-32-chars!!' }}
+          VAPID_PUBLIC_KEY: ${{ secrets.E2E_VAPID_PUBLIC_KEY || 'BEl62iUYgUivxIkv69yViEuiBIa-Ib9-SkvMeAtA3LFgDzkrxZJjSgSnfckjBJuBkr3qBUYIHBQFLXYp5Nksh8U' }}
+          VAPID_PRIVATE_KEY: ${{ secrets.E2E_VAPID_PRIVATE_KEY || 'UUxI4O8-HoGs86_GBRhFxGMpHMTKJmEXAZMFnTa5YCc' }}
+          VAPID_SUBJECT: ${{ secrets.E2E_VAPID_SUBJECT || 'mailto:e2e-test@example.com' }}
+          E2E_BASE_URL: 'http://localhost:3001'
+          PORT: '3001'
+
+      # 테스트 결과 아티팩트 업로드 (실패 시에도 확인 가능)
+      - name: Upload Playwright report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report-${{ github.run_id }}
+          path: playwright-report/
+          retention-days: 14
+
+      - name: Upload test results (traces, screenshots, videos)
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-results-${{ github.run_id }}
+          path: test-results/
+          retention-days: 7

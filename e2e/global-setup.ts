@@ -25,30 +25,21 @@ async function globalSetup(): Promise<void> {
     console.log('[E2E Setup] 기존 테스트 DB 삭제 완료');
   }
 
-  // Prisma 마이그레이션 및 클라이언트 생성
-  console.log('[E2E Setup] Prisma 마이그레이션 적용 중...');
+  // Prisma 스키마를 DB에 직접 반영 (migrations 디렉토리 불필요)
+  console.log('[E2E Setup] Prisma db push 실행 중...');
   try {
-    execSync('npx prisma migrate deploy', {
+    execSync('npx prisma db push --skip-generate --accept-data-loss', {
       cwd: path.resolve(__dirname, '..'),
       env: {
         ...process.env,
         DATABASE_URL: testDBUrl,
       },
-      stdio: 'pipe',
-    });
-    console.log('[E2E Setup] Prisma 마이그레이션 완료');
-  } catch {
-    // 마이그레이션 이력이 없을 경우 db push로 폴백
-    console.log('[E2E Setup] 마이그레이션 없음, db push 실행 중...');
-    execSync('npx prisma db push --skip-generate', {
-      cwd: path.resolve(__dirname, '..'),
-      env: {
-        ...process.env,
-        DATABASE_URL: testDBUrl,
-      },
-      stdio: 'pipe',
+      stdio: 'inherit',
     });
     console.log('[E2E Setup] Prisma db push 완료');
+  } catch (error) {
+    console.error('[E2E Setup] Prisma db push 실패:', error);
+    throw error;
   }
 
   // 시드 데이터 삽입

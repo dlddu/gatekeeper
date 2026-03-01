@@ -207,7 +207,6 @@ test.describe.skip('브라우저 Push 모킹 (page.addInitScript + page.route)',
 
   test('page.route로 /api/push/subscribe 요청이 인터셉트된다 (happy path)', async ({
     page,
-    request,
   }) => {
     await mockPushSubscriptionRoutes(page);
 

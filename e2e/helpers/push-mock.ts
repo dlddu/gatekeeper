@@ -56,7 +56,7 @@ export async function mockBrowserPushAPIs(page: Page): Promise<void> {
       dispatchEvent() { return true; }
     }
 
-    // @ts-ignore - 브라우저 전역 Notification 교체
+    // @ts-expect-error - 브라우저 전역 Notification 교체
     window.Notification = MockNotification;
 
     // PushSubscription 모킹

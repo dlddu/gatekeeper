@@ -1,6 +1,6 @@
 import { test, expect } from '@playwright/test';
 import { loginAsAdmin, withAuthHeader } from './helpers/auth';
-import { createTestRequest, cleanupTestData, findRequestByExternalId } from './helpers/db';
+import { cleanupTestData } from './helpers/db';
 
 /**
  * Request API E2E 테스트

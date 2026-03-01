@@ -12,8 +12,14 @@ const config: Config = {
         },
       },
     ],
-    // jose is ESM-only; transform it via babel-jest with ESM support
-    '^.+\\.js$': ['babel-jest', { presets: [] }],
+    // jose is ESM-only; transform it via babel-jest using a dedicated config
+    // that does NOT conflict with Next.js (babel.config.js is not present in root)
+    '^.+\\.js$': [
+      'babel-jest',
+      {
+        configFile: './jest.babel.config.js',
+      },
+    ],
   },
   // Allow transforming jose (ESM package) by overriding the default ignore pattern
   transformIgnorePatterns: [

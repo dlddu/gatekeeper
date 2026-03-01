@@ -69,7 +69,7 @@ export default function LoginPage() {
           />
         </div>
         {error && <p role="alert">{error}</p>}
-        <button type="submit" name="로그인" disabled={isLoading}>
+        <button type="submit" name="로그인" aria-label="로그인" disabled={isLoading}>
           {isLoading ? (
             <span aria-label="로딩 중">
               <svg

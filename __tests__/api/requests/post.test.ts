@@ -64,6 +64,7 @@ function makeMockRequest(overrides: Record<string, unknown> = {}): Record<string
     requesterName: 'CI Bot',
     status: 'PENDING',
     timeoutSeconds: null,
+    expiresAt: null,
     processedAt: null,
     processedById: null,
     createdAt: new Date('2024-01-01T00:00:00.000Z'),
@@ -533,6 +534,110 @@ describe('POST /api/requests', () => {
           }),
         })
       );
+    });
+
+    it('timeoutSeconds가 있으면 expiresAt를 계산하여 저장해야 한다', async () => {
+      // Arrange
+      const mockRecord = makeMockRequest({ timeoutSeconds: 600, expiresAt: new Date('2024-01-01T00:10:00.000Z') });
+      mockRequestCreate.mockResolvedValue(mockRecord);
+
+      const request = makeRequest(
+        {
+          externalId: 'ext-expires',
+          context: '만료 시간이 있는 요청',
+          requesterName: 'CI Bot',
+          timeoutSeconds: 600,
+        },
+        VALID_API_KEY
+      );
+
+      // Act
+      await POST(request);
+
+      // Assert
+      expect(mockRequestCreate).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: expect.objectContaining({
+            timeoutSeconds: 600,
+            expiresAt: expect.any(Date),
+          }),
+        })
+      );
+    });
+
+    it('timeoutSeconds가 없으면 expiresAt가 null로 저장되어야 한다', async () => {
+      // Arrange
+      const mockRecord = makeMockRequest({ timeoutSeconds: null, expiresAt: null });
+      mockRequestCreate.mockResolvedValue(mockRecord);
+
+      const request = makeRequest(
+        {
+          externalId: 'ext-no-expires',
+          context: '만료 시간이 없는 요청',
+          requesterName: 'CI Bot',
+        },
+        VALID_API_KEY
+      );
+
+      // Act
+      await POST(request);
+
+      // Assert
+      expect(mockRequestCreate).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: expect.objectContaining({
+            timeoutSeconds: null,
+            expiresAt: null,
+          }),
+        })
+      );
+    });
+
+    it('응답 body에 expiresAt가 포함되어야 한다', async () => {
+      // Arrange
+      const expiresAtDate = new Date('2024-01-01T00:10:00.000Z');
+      const mockRecord = makeMockRequest({ timeoutSeconds: 600, expiresAt: expiresAtDate });
+      mockRequestCreate.mockResolvedValue(mockRecord);
+
+      const request = makeRequest(
+        {
+          externalId: 'ext-expires-resp',
+          context: '만료 시간 응답 확인',
+          requesterName: 'CI Bot',
+          timeoutSeconds: 600,
+        },
+        VALID_API_KEY
+      );
+
+      // Act
+      const response = await POST(request);
+      const body = await response.json();
+
+      // Assert
+      expect(body).toHaveProperty('expiresAt');
+      expect(body.expiresAt).toBe(expiresAtDate.toISOString());
+    });
+
+    it('timeoutSeconds가 없으면 응답의 expiresAt가 null이어야 한다', async () => {
+      // Arrange
+      const mockRecord = makeMockRequest({ timeoutSeconds: null, expiresAt: null });
+      mockRequestCreate.mockResolvedValue(mockRecord);
+
+      const request = makeRequest(
+        {
+          externalId: 'ext-no-expires-resp',
+          context: '만료 시간 없음 응답 확인',
+          requesterName: 'CI Bot',
+        },
+        VALID_API_KEY
+      );
+
+      // Act
+      const response = await POST(request);
+      const body = await response.json();
+
+      // Assert
+      expect(body.expiresAt).toBeNull();
     });
 
     it('필수 필드로 prisma.request.create를 호출해야 한다', async () => {

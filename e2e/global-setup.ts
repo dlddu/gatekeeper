@@ -28,7 +28,7 @@ async function globalSetup(): Promise<void> {
   // Prisma 스키마를 DB에 직접 반영 (migrations 디렉토리 불필요)
   console.log('[E2E Setup] Prisma db push 실행 중...');
   try {
-    execSync('npx prisma db push --skip-generate --accept-data-loss', {
+    execSync('npx prisma db push --accept-data-loss', {
       cwd: path.resolve(__dirname, '..'),
       env: {
         ...process.env,

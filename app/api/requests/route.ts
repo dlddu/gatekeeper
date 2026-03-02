@@ -15,7 +15,7 @@ export async function POST(request: NextRequest): Promise<Response> {
   }
 
   const body = await request.json();
-  const { externalId, context, requesterName, timeoutSeconds } = body;
+  const { externalId, context, requesterName, timeoutSeconds, userId } = body;
 
   // 필수 필드 검증
   if (!externalId || !context || !requesterName) {
@@ -23,6 +23,17 @@ export async function POST(request: NextRequest): Promise<Response> {
       status: 400,
       headers: { 'Content-Type': 'application/json' },
     });
+  }
+
+  // userId가 제공된 경우 존재하는 사용자인지 검증
+  if (userId) {
+    const user = await prisma.user.findUnique({ where: { id: userId } });
+    if (!user) {
+      return new Response(JSON.stringify({ error: 'User not found' }), {
+        status: 400,
+        headers: { 'Content-Type': 'application/json' },
+      });
+    }
   }
 
   try {

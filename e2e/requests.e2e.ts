@@ -509,8 +509,7 @@ test.describe('POST /api/requests (확인 요청 생성 - API Key 인증)', () =
     expect(body.timeoutSeconds).toBeNull();
   });
 
-  // TODO: userId 검증 로직 구현 후 활성화
-  test.skip('존재하지 않는 userId를 지정하면 에러를 반환한다 (error case)', async ({ request }) => {
+  test('존재하지 않는 userId를 지정하면 에러를 반환한다 (error case)', async ({ request }) => {
     const externalId = `e2e-apikey-nouser-${Date.now()}`;
 
     const response = await request.post('/api/requests', {

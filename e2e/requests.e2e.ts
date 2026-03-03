@@ -1,6 +1,6 @@
 import { test, expect } from '@playwright/test';
 import { loginAsAdmin, withAuthHeader } from './helpers/auth';
-import { cleanupTestData } from './helpers/db';
+import { cleanupTestData, createTestRequest } from './helpers/db';
 
 /**
  * Request API E2E 테스트
@@ -547,5 +547,105 @@ test.describe('POST /api/requests (확인 요청 생성 - API Key 인증)', () =
     });
 
     expect(response.status()).toBe(401);
+  });
+});
+
+// TODO: Activate when DLD-652 is implemented
+test.describe.skip('GET /api/requests/:id (요청 상태 polling)', () => {
+  /**
+   * DLD-652: 작업 4-1: [요청 상태 polling] e2e 테스트 작성 (skipped)
+   * 부모 이슈: DLD-645 (Gatekeeper — 승인 게이트웨이 서비스)
+   *
+   * GET /api/requests/:id (공개 API, 인증 불필요)로 요청 상태를 polling하는
+   * 시나리오를 검증합니다.
+   */
+
+  const createdExternalIds: string[] = [];
+
+  test.afterEach(async () => {
+    await cleanupTestData(createdExternalIds.splice(0));
+  });
+
+  test('대기 중인 요청을 polling하면 status가 PENDING이다 (happy path)', async ({ request }) => {
+    // 글로벌 시드 데이터에서 PENDING 요청의 ID 획득
+    const listResponse = await request.get('/api/requests');
+    const requests = await listResponse.json();
+
+    const targetRequest = requests.find(
+      (r: { externalId: string }) => r.externalId === 'e2e-pending-001'
+    );
+    expect(targetRequest).toBeDefined();
+
+    const response = await request.get(`/api/requests/${targetRequest.id}`);
+
+    expect(response.status()).toBe(200);
+
+    const body = await response.json();
+    expect(body.status).toBe('PENDING');
+  });
+
+  test('승인된 요청을 polling하면 status가 APPROVED이다 (happy path)', async ({ request }) => {
+    // 글로벌 시드 데이터에서 APPROVED 요청의 ID 획득
+    const listResponse = await request.get('/api/requests');
+    const requests = await listResponse.json();
+
+    const targetRequest = requests.find(
+      (r: { externalId: string }) => r.externalId === 'e2e-approved-001'
+    );
+    expect(targetRequest).toBeDefined();
+
+    const response = await request.get(`/api/requests/${targetRequest.id}`);
+
+    expect(response.status()).toBe(200);
+
+    const body = await response.json();
+    expect(body.status).toBe('APPROVED');
+  });
+
+  test('거절된 요청을 polling하면 status가 REJECTED이다 (happy path)', async ({ request }) => {
+    // 글로벌 시드 데이터에서 REJECTED 요청의 ID 획득
+    const listResponse = await request.get('/api/requests');
+    const requests = await listResponse.json();
+
+    const targetRequest = requests.find(
+      (r: { externalId: string }) => r.externalId === 'e2e-rejected-001'
+    );
+    expect(targetRequest).toBeDefined();
+
+    const response = await request.get(`/api/requests/${targetRequest.id}`);
+
+    expect(response.status()).toBe(200);
+
+    const body = await response.json();
+    expect(body.status).toBe('REJECTED');
+  });
+
+  test('만료된 요청을 polling하면 status가 EXPIRED이다 (edge case)', async ({ request }) => {
+    // EXPIRED 시드 데이터가 없으므로 DB에 직접 EXPIRED 상태로 생성
+    const externalId = `e2e-expired-${Date.now()}`;
+    createdExternalIds.push(externalId);
+
+    const created = await createTestRequest({
+      externalId,
+      context: '만료 상태 polling 테스트용 요청',
+      requesterName: 'E2E Bot',
+      status: 'EXPIRED',
+    });
+
+    const response = await request.get(`/api/requests/${created.id}`);
+
+    expect(response.status()).toBe(200);
+
+    const body = await response.json();
+    expect(body.status).toBe('EXPIRED');
+  });
+
+  test('존재하지 않는 ID로 polling하면 404를 반환한다 (error case)', async ({ request }) => {
+    const response = await request.get('/api/requests/nonexistent-id-000');
+
+    expect(response.status()).toBe(404);
+
+    const body = await response.json();
+    expect(body).toHaveProperty('error');
   });
 });

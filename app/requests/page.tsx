@@ -63,26 +63,53 @@ export default function RequestsPage() {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <p className="text-gray-400">로딩 중...</p>
+      <div
+        className="min-h-screen flex items-center justify-center"
+        style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+      >
+        <p className="text-gray-400" style={{ color: '#9ca3af' }}>로딩 중...</p>
       </div>
     );
   }
 
   if (error) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <p className="text-red-500">{error}</p>
+      <div
+        className="min-h-screen flex items-center justify-center"
+        style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+      >
+        <p className="text-red-500" style={{ color: '#ef4444' }}>{error}</p>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 pb-16">
-      <header className="bg-white border-b border-gray-200 px-4 py-3">
-        <h1 className="text-lg font-semibold text-gray-900">대기 목록</h1>
+    <div
+      className="min-h-screen bg-gray-50 pb-16"
+      style={{ minHeight: '100vh', backgroundColor: '#f9fafb', paddingBottom: '4rem' }}
+    >
+      <header
+        className="bg-white border-b border-gray-200 px-4 py-3"
+        style={{
+          backgroundColor: '#ffffff',
+          borderBottom: '1px solid #e5e7eb',
+          paddingLeft: '1rem',
+          paddingRight: '1rem',
+          paddingTop: '0.75rem',
+          paddingBottom: '0.75rem',
+        }}
+      >
+        <h1
+          className="text-lg font-semibold text-gray-900"
+          style={{ fontSize: '1.125rem', fontWeight: 600, color: '#111827' }}
+        >
+          대기 목록
+        </h1>
       </header>
-      <main className="px-4 py-4">
+      <main
+        className="px-4 py-4"
+        style={{ paddingLeft: '1rem', paddingRight: '1rem', paddingTop: '1rem', paddingBottom: '1rem' }}
+      >
         <RequestCardList requests={requests} />
       </main>
       <BottomNav />

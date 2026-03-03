@@ -13,7 +13,18 @@ export default function BottomNav() {
   ];
 
   return (
-    <nav className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 flex">
+    <nav
+      className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 flex"
+      style={{
+        position: 'fixed',
+        bottom: 0,
+        left: 0,
+        right: 0,
+        backgroundColor: '#ffffff',
+        borderTop: '1px solid #e5e7eb',
+        display: 'flex',
+      }}
+    >
       {tabs.map((tab) => {
         const isActive = pathname === tab.href || (tab.href === '/requests' && pathname?.startsWith('/requests'));
         return (
@@ -21,6 +32,17 @@ export default function BottomNav() {
             key={tab.href}
             onClick={() => router.push(tab.href)}
             className={`flex-1 py-3 text-sm font-medium ${isActive ? 'text-gray-900' : 'text-gray-400'}`}
+            style={{
+              flex: 1,
+              paddingTop: '0.75rem',
+              paddingBottom: '0.75rem',
+              fontSize: '0.875rem',
+              fontWeight: 500,
+              color: isActive ? '#111827' : '#9ca3af',
+              background: 'none',
+              border: 'none',
+              cursor: 'pointer',
+            }}
           >
             {tab.label}
           </button>

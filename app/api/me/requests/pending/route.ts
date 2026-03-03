@@ -54,12 +54,9 @@ export async function GET(request: NextRequest): Promise<Response> {
       externalId: req.externalId,
       context: req.context,
       requesterName: req.requesterName,
-      callbackUrl: req.callbackUrl,
       status: req.status,
       timeoutSeconds: req.timeoutSeconds,
       createdAt: req.createdAt,
-      respondedAt: req.respondedAt,
-      respondedBy: req.respondedBy,
       expiresAt,
     });
   }

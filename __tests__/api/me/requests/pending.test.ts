@@ -306,7 +306,8 @@ describe('GET /api/me/requests/pending', () => {
     it('timeoutSeconds가 있는 요청은 expiresAt이 계산되어 포함되어야 한다', async () => {
       // Arrange
       mockVerifyToken.mockResolvedValue(verifiedPayload);
-      const createdAt = new Date('2024-01-01T00:00:00.000Z');
+      // 미래 시각으로 설정하여 만료되지 않도록 함 (현재 + 2시간)
+      const createdAt = new Date(Date.now() + 2 * 60 * 60 * 1000);
       const timeoutSeconds = 3600; // 1시간
       mockRequestFindMany.mockResolvedValue([
         makeMockRequest({ timeoutSeconds, createdAt }),
@@ -325,7 +326,8 @@ describe('GET /api/me/requests/pending', () => {
     it('timeoutSeconds=60인 요청의 expiresAt은 createdAt + 60초이어야 한다', async () => {
       // Arrange
       mockVerifyToken.mockResolvedValue(verifiedPayload);
-      const createdAt = new Date('2024-06-01T12:00:00.000Z');
+      // 미래 시각으로 설정하여 만료되지 않도록 함 (현재 + 1시간)
+      const createdAt = new Date(Date.now() + 60 * 60 * 1000);
       mockRequestFindMany.mockResolvedValue([
         makeMockRequest({ timeoutSeconds: 60, createdAt }),
       ]);
@@ -336,7 +338,7 @@ describe('GET /api/me/requests/pending', () => {
       const body = await response.json();
 
       // Assert
-      const expectedExpiresAt = new Date('2024-06-01T12:01:00.000Z');
+      const expectedExpiresAt = new Date(createdAt.getTime() + 60 * 1000);
       expect(body.requests[0].expiresAt).toBe(expectedExpiresAt.toISOString());
     });
 

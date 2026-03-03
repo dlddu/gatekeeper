@@ -212,7 +212,7 @@ test.describe('GET /api/requests/:id (단건 조회)', () => {
     );
     expect(targetRequest).toBeDefined();
 
-    const response = await request.get(`/api/requests/${targetRequest.id}`);
+    const response = await request.get(`/api/requests/${targetRequest.id}`, withApiKeyHeader());
 
     expect(response.status()).toBe(200);
 
@@ -224,7 +224,7 @@ test.describe('GET /api/requests/:id (단건 조회)', () => {
   test('존재하지 않는 Request를 조회하면 404를 반환한다 (error case)', async ({
     request,
   }) => {
-    const response = await request.get('/api/requests/99999');
+    const response = await request.get('/api/requests/99999', withApiKeyHeader());
 
     expect(response.status()).toBe(404);
   });
@@ -550,13 +550,12 @@ test.describe('POST /api/requests (확인 요청 생성 - API Key 인증)', () =
   });
 });
 
-// TODO: Activate when DLD-652 is implemented
-test.describe.skip('GET /api/requests/:id (요청 상태 polling)', () => {
+test.describe('GET /api/requests/:id (요청 상태 polling)', () => {
   /**
-   * DLD-652: 작업 4-1: [요청 상태 polling] e2e 테스트 작성 (skipped)
+   * DLD-653: 작업 4-2: [요청 상태 polling] 구현 및 e2e 테스트 활성화
    * 부모 이슈: DLD-645 (Gatekeeper — 승인 게이트웨이 서비스)
    *
-   * GET /api/requests/:id (공개 API, 인증 불필요)로 요청 상태를 polling하는
+   * GET /api/requests/:id (API Key 인증)로 요청 상태를 polling하는
    * 시나리오를 검증합니다.
    */
 
@@ -576,7 +575,7 @@ test.describe.skip('GET /api/requests/:id (요청 상태 polling)', () => {
     );
     expect(targetRequest).toBeDefined();
 
-    const response = await request.get(`/api/requests/${targetRequest.id}`);
+    const response = await request.get(`/api/requests/${targetRequest.id}`, withApiKeyHeader());
 
     expect(response.status()).toBe(200);
 
@@ -594,7 +593,7 @@ test.describe.skip('GET /api/requests/:id (요청 상태 polling)', () => {
     );
     expect(targetRequest).toBeDefined();
 
-    const response = await request.get(`/api/requests/${targetRequest.id}`);
+    const response = await request.get(`/api/requests/${targetRequest.id}`, withApiKeyHeader());
 
     expect(response.status()).toBe(200);
 
@@ -612,7 +611,7 @@ test.describe.skip('GET /api/requests/:id (요청 상태 polling)', () => {
     );
     expect(targetRequest).toBeDefined();
 
-    const response = await request.get(`/api/requests/${targetRequest.id}`);
+    const response = await request.get(`/api/requests/${targetRequest.id}`, withApiKeyHeader());
 
     expect(response.status()).toBe(200);
 
@@ -632,7 +631,7 @@ test.describe.skip('GET /api/requests/:id (요청 상태 polling)', () => {
       status: 'EXPIRED',
     });
 
-    const response = await request.get(`/api/requests/${created.id}`);
+    const response = await request.get(`/api/requests/${created.id}`, withApiKeyHeader());
 
     expect(response.status()).toBe(200);
 
@@ -641,7 +640,7 @@ test.describe.skip('GET /api/requests/:id (요청 상태 polling)', () => {
   });
 
   test('존재하지 않는 ID로 polling하면 404를 반환한다 (error case)', async ({ request }) => {
-    const response = await request.get('/api/requests/nonexistent-id-000');
+    const response = await request.get('/api/requests/nonexistent-id-000', withApiKeyHeader());
 
     expect(response.status()).toBe(404);
 

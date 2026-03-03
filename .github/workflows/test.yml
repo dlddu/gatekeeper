@@ -32,8 +32,10 @@ jobs:
         run: npm test -- --no-coverage
         env:
           JWT_SECRET: test-secret-key-at-least-32-chars-long!!
+          API_SECRET_KEY: test-api-secret-key-for-ci
 
       - name: Run tests with coverage
         run: npm run test:coverage
         env:
           JWT_SECRET: test-secret-key-at-least-32-chars-long!!
+          API_SECRET_KEY: test-api-secret-key-for-ci

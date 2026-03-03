@@ -27,6 +27,7 @@ model Request {
   requesterName  String
   status         RequestStatus @default(PENDING)
   timeoutSeconds Int?
+  expiresAt      DateTime?
   createdAt      DateTime  @default(now())
   updatedAt      DateTime  @updatedAt
   processedAt    DateTime?

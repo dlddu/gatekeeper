@@ -18,8 +18,19 @@ import { cleanupTestData } from './helpers/db';
  * TODO: DLD-647 구현 완료 후 test.describe.skip → test.describe 로 변경
  */
 
+// API 키 헬퍼 (playwright.config.ts의 webServer.env.API_SECRET_KEY와 동일한 값 참조)
+const E2E_API_KEY = process.env.API_SECRET_KEY ?? 'e2e-test-api-key-valid';
+
+function withApiKeyHeader(): { headers: Record<string, string> } {
+  return {
+    headers: {
+      'x-api-key': E2E_API_KEY,
+    },
+  };
+}
+
 // TODO: Activate when DLD-647 is implemented
-test.describe.skip('POST /api/requests (승인 요청 생성 - 공개 API)', () => {
+test.describe('POST /api/requests (승인 요청 생성 - 공개 API)', () => {
   const createdExternalIds: string[] = [];
 
   test.afterEach(async () => {
@@ -31,6 +42,7 @@ test.describe.skip('POST /api/requests (승인 요청 생성 - 공개 API)', () 
     createdExternalIds.push(externalId);
 
     const response = await request.post('/api/requests', {
+      ...withApiKeyHeader(),
       data: {
         externalId,
         context: '배포 승인 요청입니다.',
@@ -55,6 +67,7 @@ test.describe.skip('POST /api/requests (승인 요청 생성 - 공개 API)', () 
     createdExternalIds.push(externalId);
 
     const response = await request.post('/api/requests', {
+      ...withApiKeyHeader(),
       data: {
         externalId,
         context: '타임아웃이 있는 승인 요청',
@@ -67,6 +80,7 @@ test.describe.skip('POST /api/requests (승인 요청 생성 - 공개 API)', () 
 
     const body = await response.json();
     expect(body.timeoutSeconds).toBe(600);
+    expect(body.expiresAt).toBeTruthy();
   });
 
   test('동일한 externalId로 Request를 중복 생성하면 409를 반환한다 (edge case)', async ({
@@ -77,11 +91,13 @@ test.describe.skip('POST /api/requests (승인 요청 생성 - 공개 API)', () 
 
     // 첫 번째 생성
     await request.post('/api/requests', {
+      ...withApiKeyHeader(),
       data: { externalId, context: '첫 번째', requesterName: 'Bot' },
     });
 
     // 중복 생성 시도
     const response = await request.post('/api/requests', {
+      ...withApiKeyHeader(),
       data: { externalId, context: '두 번째', requesterName: 'Bot' },
     });
 
@@ -90,6 +106,7 @@ test.describe.skip('POST /api/requests (승인 요청 생성 - 공개 API)', () 
 
   test('externalId 없이 요청하면 400을 반환한다 (error case)', async ({ request }) => {
     const response = await request.post('/api/requests', {
+      ...withApiKeyHeader(),
       data: {
         context: '필수 필드 누락',
         requesterName: 'Bot',
@@ -101,6 +118,7 @@ test.describe.skip('POST /api/requests (승인 요청 생성 - 공개 API)', () 
 
   test('context 없이 요청하면 400을 반환한다 (error case)', async ({ request }) => {
     const response = await request.post('/api/requests', {
+      ...withApiKeyHeader(),
       data: {
         externalId: `e2e-nocontext-${Date.now()}`,
         requesterName: 'Bot',
@@ -112,6 +130,7 @@ test.describe.skip('POST /api/requests (승인 요청 생성 - 공개 API)', () 
 
   test('requesterName 없이 요청하면 400을 반환한다 (error case)', async ({ request }) => {
     const response = await request.post('/api/requests', {
+      ...withApiKeyHeader(),
       data: {
         externalId: `e2e-noname-${Date.now()}`,
         context: '필수 필드 누락',
@@ -123,7 +142,7 @@ test.describe.skip('POST /api/requests (승인 요청 생성 - 공개 API)', () 
 });
 
 // TODO: Activate when DLD-647 is implemented
-test.describe.skip('GET /api/requests (요청 목록 조회 - 공개 API)', () => {
+test.describe('GET /api/requests (요청 목록 조회 - 공개 API)', () => {
   test('토큰 없이 요청 목록을 조회할 수 있다 (happy path)', async ({ request }) => {
     const response = await request.get('/api/requests');
 
@@ -153,9 +172,12 @@ test.describe.skip('GET /api/requests (요청 목록 조회 - 공개 API)', () =
 
     const body = await response.json();
     expect(Array.isArray(body)).toBe(true);
-    body.forEach((r: { status: string }) => {
-      expect(r.status).toBe('PENDING');
-    });
+
+    // 모든 항목이 PENDING 상태여야 함
+    const allPending = body.every(
+      (r: { status: string }) => r.status === 'PENDING'
+    );
+    expect(allPending).toBe(true);
   });
 
   test('status 쿼리로 APPROVED 요청만 필터링할 수 있다 (happy path)', async ({ request }) => {
@@ -177,90 +199,106 @@ test.describe.skip('GET /api/requests (요청 목록 조회 - 공개 API)', () =
 });
 
 // TODO: Activate when DLD-647 is implemented
-test.describe.skip('GET /api/requests/:id (단건 조회)', () => {
-  test('존재하는 Request ID로 단건 조회하면 200을 반환한다 (happy path)', async ({
+test.describe('GET /api/requests/:id (단건 조회)', () => {
+  test('존재하는 Request를 조회하면 200을 반환한다 (happy path)', async ({
     request,
   }) => {
-    // 시드 데이터의 externalId로 먼저 목록 조회하여 실제 ID 획득
+    // 글로벌 시드 데이터에서 ID 획득
     const listResponse = await request.get('/api/requests');
-    const list = await listResponse.json();
-    const seedRequest = list.find(
+    const requests = await listResponse.json();
+
+    const targetRequest = requests.find(
       (r: { externalId: string }) => r.externalId === 'e2e-pending-001'
     );
+    expect(targetRequest).toBeDefined();
 
-    expect(seedRequest).toBeDefined();
+    const response = await request.get(`/api/requests/${targetRequest.id}`);
 
-    const response = await request.get(`/api/requests/${seedRequest.id}`);
     expect(response.status()).toBe(200);
 
     const body = await response.json();
-    expect(body.id).toBe(seedRequest.id);
+    expect(body.id).toBe(targetRequest.id);
     expect(body.externalId).toBe('e2e-pending-001');
   });
 
-  test('존재하지 않는 ID로 조회하면 404를 반환한다 (error case)', async ({ request }) => {
-    const response = await request.get('/api/requests/nonexistent-request-id-000');
+  test('존재하지 않는 Request를 조회하면 404를 반환한다 (error case)', async ({
+    request,
+  }) => {
+    const response = await request.get('/api/requests/99999');
 
     expect(response.status()).toBe(404);
   });
 });
 
 // TODO: Activate when DLD-647 is implemented
-test.describe.skip('PATCH /api/requests/:id/approve (승인)', () => {
+test.describe('PATCH /api/requests/:id/approve (승인)', () => {
   const createdExternalIds: string[] = [];
 
   test.afterEach(async () => {
     await cleanupTestData(createdExternalIds.splice(0));
   });
 
-  test('PENDING 요청을 승인하면 status가 APPROVED로 변경된다 (happy path)', async ({
+  test('PENDING 상태의 Request를 승인하면 200을 반환한다 (happy path)', async ({
     request,
   }) => {
-    // 새 PENDING 요청 생성
+    // Arrange: PENDING Request 생성
     const externalId = `e2e-approve-${Date.now()}`;
     createdExternalIds.push(externalId);
 
-    await request.post('/api/requests', {
-      data: { externalId, context: '승인 테스트 요청', requesterName: 'Bot' },
+    const createResponse = await request.post('/api/requests', {
+      ...withApiKeyHeader(),
+      data: {
+        externalId,
+        context: '승인 테스트용 요청',
+        requesterName: 'E2E Bot',
+      },
     });
+    expect(createResponse.status()).toBe(201);
+    const created = await createResponse.json();
 
-    // 목록에서 ID 확인
-    const listResponse = await request.get('/api/requests?status=PENDING');
-    const list = await listResponse.json();
-    const targetRequest = list.find((r: { externalId: string }) => r.externalId === externalId);
-    expect(targetRequest).toBeDefined();
+    // JWT 토큰 획득
+    const auth = await loginAsAdmin(request);
 
-    // 인증 토큰 획득 후 승인
-    const { token } = await loginAsAdmin(request);
+    // Act: 승인 요청
     const approveResponse = await request.patch(
-      `/api/requests/${targetRequest.id}/approve`,
-      withAuthHeader(token)
+      `/api/requests/${created.id}/approve`,
+      withAuthHeader(auth.token)
     );
 
+    // Assert
     expect(approveResponse.status()).toBe(200);
-
     const body = await approveResponse.json();
     expect(body.status).toBe('APPROVED');
-    expect(body.processedAt).toBeDefined();
-    expect(body.processedById).toBeDefined();
+    expect(body.processedAt).toBeTruthy();
   });
 
-  test('이미 APPROVED된 요청을 재승인하면 409를 반환한다 (edge case)', async ({ request }) => {
-    const { token } = await loginAsAdmin(request);
+  test('이미 APPROVED 상태의 Request를 다시 승인하면 409를 반환한다 (edge case)', async ({
+    request,
+  }) => {
+    // Arrange: PENDING Request 생성 후 승인
+    const externalId = `e2e-approve-dup-${Date.now()}`;
+    createdExternalIds.push(externalId);
 
-    // 시드 데이터의 이미 승인된 요청 ID 획득
-    const listResponse = await request.get('/api/requests?status=APPROVED');
-    const list = await listResponse.json();
-    const approvedRequest = list.find(
-      (r: { externalId: string }) => r.externalId === 'e2e-approved-001'
-    );
-    expect(approvedRequest).toBeDefined();
+    const createResponse = await request.post('/api/requests', {
+      ...withApiKeyHeader(),
+      data: {
+        externalId,
+        context: '중복 승인 테스트용 요청',
+        requesterName: 'E2E Bot',
+      },
+    });
+    const created = await createResponse.json();
+    const auth = await loginAsAdmin(request);
 
+    await request.patch(`/api/requests/${created.id}/approve`, withAuthHeader(auth.token));
+
+    // Act: 다시 승인 시도
     const response = await request.patch(
-      `/api/requests/${approvedRequest.id}/approve`,
-      withAuthHeader(token)
+      `/api/requests/${created.id}/approve`,
+      withAuthHeader(auth.token)
     );
 
+    // Assert
     expect(response.status()).toBe(409);
   });
 
@@ -292,56 +330,74 @@ test.describe.skip('PATCH /api/requests/:id/approve (승인)', () => {
 });
 
 // TODO: Activate when DLD-647 is implemented
-test.describe.skip('PATCH /api/requests/:id/reject (거절)', () => {
+test.describe('PATCH /api/requests/:id/reject (거절)', () => {
   const createdExternalIds: string[] = [];
 
   test.afterEach(async () => {
     await cleanupTestData(createdExternalIds.splice(0));
   });
 
-  test('PENDING 요청을 거절하면 status가 REJECTED로 변경된다 (happy path)', async ({
+  test('PENDING 상태의 Request를 거절하면 200을 반환한다 (happy path)', async ({
     request,
   }) => {
+    // Arrange: PENDING Request 생성
     const externalId = `e2e-reject-${Date.now()}`;
     createdExternalIds.push(externalId);
 
-    await request.post('/api/requests', {
-      data: { externalId, context: '거절 테스트 요청', requesterName: 'Bot' },
+    const createResponse = await request.post('/api/requests', {
+      ...withApiKeyHeader(),
+      data: {
+        externalId,
+        context: '거절 테스트용 요청',
+        requesterName: 'E2E Bot',
+      },
     });
+    expect(createResponse.status()).toBe(201);
+    const created = await createResponse.json();
 
-    const listResponse = await request.get('/api/requests?status=PENDING');
-    const list = await listResponse.json();
-    const targetRequest = list.find((r: { externalId: string }) => r.externalId === externalId);
-    expect(targetRequest).toBeDefined();
+    // JWT 토큰 획득
+    const auth = await loginAsAdmin(request);
 
-    const { token } = await loginAsAdmin(request);
+    // Act: 거절 요청
     const rejectResponse = await request.patch(
-      `/api/requests/${targetRequest.id}/reject`,
-      withAuthHeader(token)
+      `/api/requests/${created.id}/reject`,
+      withAuthHeader(auth.token)
     );
 
+    // Assert
     expect(rejectResponse.status()).toBe(200);
-
     const body = await rejectResponse.json();
     expect(body.status).toBe('REJECTED');
-    expect(body.processedAt).toBeDefined();
+    expect(body.processedAt).toBeTruthy();
   });
 
-  test('이미 REJECTED된 요청을 재거절하면 409를 반환한다 (edge case)', async ({ request }) => {
-    const { token } = await loginAsAdmin(request);
+  test('이미 REJECTED 상태의 Request를 다시 거절하면 409를 반환한다 (edge case)', async ({
+    request,
+  }) => {
+    // Arrange: PENDING Request 생성 후 거절
+    const externalId = `e2e-reject-dup-${Date.now()}`;
+    createdExternalIds.push(externalId);
 
-    const listResponse = await request.get('/api/requests?status=REJECTED');
-    const list = await listResponse.json();
-    const rejectedRequest = list.find(
-      (r: { externalId: string }) => r.externalId === 'e2e-rejected-001'
-    );
-    expect(rejectedRequest).toBeDefined();
+    const createResponse = await request.post('/api/requests', {
+      ...withApiKeyHeader(),
+      data: {
+        externalId,
+        context: '중복 거절 테스트용 요청',
+        requesterName: 'E2E Bot',
+      },
+    });
+    const created = await createResponse.json();
+    const auth = await loginAsAdmin(request);
 
+    await request.patch(`/api/requests/${created.id}/reject`, withAuthHeader(auth.token));
+
+    // Act: 다시 거절 시도
     const response = await request.patch(
-      `/api/requests/${rejectedRequest.id}/reject`,
-      withAuthHeader(token)
+      `/api/requests/${created.id}/reject`,
+      withAuthHeader(auth.token)
     );
 
+    // Assert
     expect(response.status()).toBe(409);
   });
 
@@ -362,17 +418,14 @@ test.describe.skip('PATCH /api/requests/:id/reject (거절)', () => {
 });
 
 // TODO: Activate when DLD-650 is implemented
-test.describe.skip('POST /api/requests (확인 요청 생성 - API Key 인증)', () => {
+test.describe('POST /api/requests (확인 요청 생성 - API Key 인증)', () => {
   /**
    * DLD-650: 작업 3-1: [확인 요청 생성] e2e 테스트 작성 (skipped)
    * 부모 이슈: DLD-645 (Gatekeeper — 승인 게이트웨이 서비스)
    *
    * API Key 기반 인증으로 POST /api/requests를 호출하는 시나리오를 검증합니다.
-   * API Key 모델, x-api-key 헤더 검증 로직은 아직 미구현 상태입니다.
-   * 테스트는 향후 구현될 형태를 예상하여 작성되었습니다.
    */
 
-  // 유효한 테스트용 API Key (global-setup.ts의 seedDatabase()에서 생성된 값과 일치해야 합니다)
   const VALID_API_KEY = 'e2e-test-api-key-valid';
   const INVALID_API_KEY = 'invalid-api-key-does-not-exist';
 

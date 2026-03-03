@@ -5,7 +5,7 @@ import { cleanupTestData, findRequestByExternalId } from './helpers/db';
 /**
  * 대기 목록 화면 E2E 테스트
  *
- * DLD-654: 작업 5-1: [대기 목록 화면] e2e 테스트 작성 (skipped)
+ * DLD-655: 작업 5-2: [대기 목록 화면] 구현 및 e2e 테스트 활성화
  * 부모 이슈: DLD-645 (Gatekeeper — 승인 게이트웨이 서비스)
  *
  * 커버리지:
@@ -14,12 +14,9 @@ import { cleanupTestData, findRequestByExternalId } from './helpers/db';
  * - 타임아웃 없는 요청 카드의 "제한 없음" 표시 (gray 색상)
  * - PENDING 요청이 없을 때 빈 상태 UI 표시
  * - 카드 클릭 시 요청 상세 페이지(/requests/{id})로 이동
- *
- * TODO: DLD-654 구현 완료 후 test.describe.skip → test.describe 로 변경
  */
 
-// TODO: Activate when DLD-654 is implemented
-test.describe.skip('대기 목록 화면 (/requests)', () => {
+test.describe('대기 목록 화면 (/requests)', () => {
   test('로그인 후 대기 목록 페이지에 접근하면 PENDING 요청이 카드로 렌더링된다 (happy path)', async ({
     page,
   }) => {
@@ -96,11 +93,11 @@ test.describe.skip('대기 목록 화면 (/requests)', () => {
     try {
       // Arrange: 빈 상태를 직접 시뮬레이션하기 위해
       // page.route로 /api/requests 응답을 빈 배열로 인터셉트
-      await page.route('**/api/requests*', async (route) => {
+      await page.route('**/api/me/requests/pending*', async (route) => {
         await route.fulfill({
           status: 200,
           contentType: 'application/json',
-          body: JSON.stringify([]),
+          body: JSON.stringify({ requests: [], count: 0 }),
         });
       });
 

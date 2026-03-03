@@ -32,6 +32,7 @@ import { prisma } from '@/lib/prisma';
 
 // 타입 캐스팅 헬퍼
 const mockRequestCreate = prisma.request.create as jest.Mock;
+const mockUserFindUnique = prisma.user.findUnique as jest.Mock;
 
 // --- 테스트 헬퍼 ---
 
@@ -324,6 +325,78 @@ describe('POST /api/requests', () => {
       // Assert
       expect(body).toHaveProperty('error');
       expect(typeof body.error).toBe('string');
+    });
+  });
+
+  // ----------------------------------------------------------------
+  // 존재하지 않는 userId → 400
+  // ----------------------------------------------------------------
+  describe('존재하지 않는 userId (400 Bad Request)', () => {
+    it('존재하지 않는 userId를 지정하면 400을 반환해야 한다', async () => {
+      // Arrange
+      mockUserFindUnique.mockResolvedValue(null);
+
+      const request = makeRequest(
+        {
+          externalId: 'ext-001',
+          context: '승인 요청',
+          requesterName: 'Bot',
+          userId: 'nonexistent-user-id',
+        },
+        VALID_API_KEY
+      );
+
+      // Act
+      const response = await POST(request);
+
+      // Assert
+      expect(response.status).toBe(400);
+      const body = await response.json();
+      expect(body).toHaveProperty('error');
+    });
+
+    it('존재하지 않는 userId 지정 시 request.create를 호출하지 않아야 한다', async () => {
+      // Arrange
+      mockUserFindUnique.mockResolvedValue(null);
+
+      const request = makeRequest(
+        {
+          externalId: 'ext-001',
+          context: '승인 요청',
+          requesterName: 'Bot',
+          userId: 'nonexistent-user-id',
+        },
+        VALID_API_KEY
+      );
+
+      // Act
+      await POST(request);
+
+      // Assert
+      expect(mockRequestCreate).not.toHaveBeenCalled();
+    });
+
+    it('존재하는 userId를 지정하면 정상적으로 201을 반환해야 한다', async () => {
+      // Arrange
+      mockUserFindUnique.mockResolvedValue({ id: 'existing-user-id', username: 'admin' });
+      const mockRecord = makeMockRequest();
+      mockRequestCreate.mockResolvedValue(mockRecord);
+
+      const request = makeRequest(
+        {
+          externalId: 'ext-001',
+          context: '승인 요청',
+          requesterName: 'Bot',
+          userId: 'existing-user-id',
+        },
+        VALID_API_KEY
+      );
+
+      // Act
+      const response = await POST(request);
+
+      // Assert
+      expect(response.status).toBe(201);
     });
   });
 

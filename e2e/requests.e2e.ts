@@ -212,7 +212,7 @@ test.describe('GET /api/requests/:id (단건 조회)', () => {
     );
     expect(targetRequest).toBeDefined();
 
-    const response = await request.get(`/api/requests/${targetRequest.id}`);
+    const response = await request.get(`/api/requests/${targetRequest.id}`, withApiKeyHeader());
 
     expect(response.status()).toBe(200);
 
@@ -224,7 +224,7 @@ test.describe('GET /api/requests/:id (단건 조회)', () => {
   test('존재하지 않는 Request를 조회하면 404를 반환한다 (error case)', async ({
     request,
   }) => {
-    const response = await request.get('/api/requests/99999');
+    const response = await request.get('/api/requests/99999', withApiKeyHeader());
 
     expect(response.status()).toBe(404);
   });

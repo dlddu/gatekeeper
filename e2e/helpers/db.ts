@@ -146,4 +146,52 @@ export async function deleteTestUser(username: string): Promise<void> {
   }
 }
 
+/**
+ * 모든 PENDING 요청의 상태를 일괄 변경
+ * 빈 상태 UI 테스트 등에서 PENDING 요청을 임시로 비활성화할 때 사용
+ * 반환값: 변경된 요청의 ID 목록 (복원 시 사용)
+ */
+export async function updateAllPendingRequestsStatus(
+  newStatus: 'APPROVED' | 'REJECTED' | 'EXPIRED'
+): Promise<string[]> {
+  const prisma = await createTestPrismaClient();
+
+  try {
+    const pendingRequests = await prisma.request.findMany({
+      where: { status: 'PENDING' },
+      select: { id: true },
+    });
+
+    const ids = pendingRequests.map((r: { id: string }) => r.id);
+
+    if (ids.length > 0) {
+      await prisma.request.updateMany({
+        where: { id: { in: ids } },
+        data: { status: newStatus },
+      });
+    }
+
+    return ids;
+  } finally {
+    await prisma.$disconnect();
+  }
+}
+
+/**
+ * 지정된 요청들의 상태를 PENDING으로 복원
+ */
+export async function restoreRequestsToPending(ids: string[]): Promise<void> {
+  if (ids.length === 0) return;
+  const prisma = await createTestPrismaClient();
+
+  try {
+    await prisma.request.updateMany({
+      where: { id: { in: ids } },
+      data: { status: 'PENDING' },
+    });
+  } finally {
+    await prisma.$disconnect();
+  }
+}
+
 export { testDBUrl, testDBPath };

@@ -1,11 +1,16 @@
 import { test, expect } from '@playwright/test';
 import { TEST_USERS } from './helpers/auth';
-import { cleanupTestData, findRequestByExternalId } from './helpers/db';
+import {
+  cleanupTestData,
+  findRequestByExternalId,
+  updateAllPendingRequestsStatus,
+  restoreRequestsToPending,
+} from './helpers/db';
 
 /**
  * 대기 목록 화면 E2E 테스트
  *
- * DLD-654: 작업 5-1: [대기 목록 화면] e2e 테스트 작성 (skipped)
+ * DLD-655: 작업 5-2: [대기 목록 화면] 구현 및 e2e 테스트 활성화
  * 부모 이슈: DLD-645 (Gatekeeper — 승인 게이트웨이 서비스)
  *
  * 커버리지:
@@ -14,12 +19,9 @@ import { cleanupTestData, findRequestByExternalId } from './helpers/db';
  * - 타임아웃 없는 요청 카드의 "제한 없음" 표시 (gray 색상)
  * - PENDING 요청이 없을 때 빈 상태 UI 표시
  * - 카드 클릭 시 요청 상세 페이지(/requests/{id})로 이동
- *
- * TODO: DLD-654 구현 완료 후 test.describe.skip → test.describe 로 변경
  */
 
-// TODO: Activate when DLD-654 is implemented
-test.describe.skip('대기 목록 화면 (/requests)', () => {
+test.describe('대기 목록 화면 (/requests)', () => {
   test('로그인 후 대기 목록 페이지에 접근하면 PENDING 요청이 카드로 렌더링된다 (happy path)', async ({
     page,
   }) => {
@@ -91,19 +93,10 @@ test.describe.skip('대기 목록 화면 (/requests)', () => {
   });
 
   test('PENDING 상태의 요청이 없을 때 빈 상태 UI가 표시된다 (edge case)', async ({ page }) => {
-    const createdExternalIds: string[] = [];
+    // Arrange: 모든 PENDING 요청을 APPROVED로 임시 변경하여 빈 상태 유도
+    const changedIds = await updateAllPendingRequestsStatus('APPROVED');
 
     try {
-      // Arrange: 빈 상태를 직접 시뮬레이션하기 위해
-      // page.route로 /api/requests 응답을 빈 배열로 인터셉트
-      await page.route('**/api/requests*', async (route) => {
-        await route.fulfill({
-          status: 200,
-          contentType: 'application/json',
-          body: JSON.stringify([]),
-        });
-      });
-
       // 로그인
       await page.goto('/login');
       await page.getByLabel('아이디').fill(TEST_USERS.admin.username);
@@ -114,7 +107,8 @@ test.describe.skip('대기 목록 화면 (/requests)', () => {
       // Assert: "대기 중인 요청이 없습니다" 텍스트가 표시됨
       await expect(page.getByText('대기 중인 요청이 없습니다')).toBeVisible();
     } finally {
-      await cleanupTestData(createdExternalIds);
+      // 복원: 변경된 요청들을 다시 PENDING으로 되돌림
+      await restoreRequestsToPending(changedIds);
     }
   });
 

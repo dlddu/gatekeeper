@@ -1,6 +1,11 @@
 import { test, expect } from '@playwright/test';
 import { TEST_USERS } from './helpers/auth';
-import { cleanupTestData, findRequestByExternalId } from './helpers/db';
+import {
+  cleanupTestData,
+  findRequestByExternalId,
+  updateAllPendingRequestsStatus,
+  restoreRequestsToPending,
+} from './helpers/db';
 
 /**
  * 대기 목록 화면 E2E 테스트
@@ -88,19 +93,10 @@ test.describe('대기 목록 화면 (/requests)', () => {
   });
 
   test('PENDING 상태의 요청이 없을 때 빈 상태 UI가 표시된다 (edge case)', async ({ page }) => {
-    const createdExternalIds: string[] = [];
+    // Arrange: 모든 PENDING 요청을 APPROVED로 임시 변경하여 빈 상태 유도
+    const changedIds = await updateAllPendingRequestsStatus('APPROVED');
 
     try {
-      // Arrange: 빈 상태를 직접 시뮬레이션하기 위해
-      // page.route로 /api/requests 응답을 빈 배열로 인터셉트
-      await page.route('**/api/me/requests/pending*', async (route) => {
-        await route.fulfill({
-          status: 200,
-          contentType: 'application/json',
-          body: JSON.stringify({ requests: [], count: 0 }),
-        });
-      });
-
       // 로그인
       await page.goto('/login');
       await page.getByLabel('아이디').fill(TEST_USERS.admin.username);
@@ -111,7 +107,8 @@ test.describe('대기 목록 화면 (/requests)', () => {
       // Assert: "대기 중인 요청이 없습니다" 텍스트가 표시됨
       await expect(page.getByText('대기 중인 요청이 없습니다')).toBeVisible();
     } finally {
-      await cleanupTestData(createdExternalIds);
+      // 복원: 변경된 요청들을 다시 PENDING으로 되돌림
+      await restoreRequestsToPending(changedIds);
     }
   });
 

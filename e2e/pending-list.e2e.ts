@@ -91,16 +91,6 @@ test.describe('대기 목록 화면 (/requests)', () => {
     const createdExternalIds: string[] = [];
 
     try {
-      // Arrange: 빈 상태를 직접 시뮬레이션하기 위해
-      // page.route로 /api/requests 응답을 빈 배열로 인터셉트
-      await page.route('**/api/me/requests/pending*', async (route) => {
-        await route.fulfill({
-          status: 200,
-          contentType: 'application/json',
-          body: JSON.stringify({ requests: [], count: 0 }),
-        });
-      });
-
       // 로그인
       await page.goto('/login');
       await page.getByLabel('아이디').fill(TEST_USERS.admin.username);

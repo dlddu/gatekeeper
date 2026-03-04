@@ -166,6 +166,15 @@ describe('Next.js 15 project structure', () => {
       const hasTs = fs.existsSync(path.join(ROOT, 'app', 'page.ts'));
       expect(hasTsx || hasTs).toBe(true);
     });
+
+    it('should have app/requests/[id]/ directory for request detail page', () => {
+      expect(fs.existsSync(path.join(ROOT, 'app', 'requests', '[id]'))).toBe(true);
+      expect(fs.statSync(path.join(ROOT, 'app', 'requests', '[id]')).isDirectory()).toBe(true);
+    });
+
+    it('should have app/requests/[id]/page.tsx for request detail page', () => {
+      expect(fs.existsSync(path.join(ROOT, 'app', 'requests', '[id]', 'page.tsx'))).toBe(true);
+    });
   });
 
   // ----------------------------------------------------------------

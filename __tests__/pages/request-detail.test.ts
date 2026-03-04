@@ -384,18 +384,19 @@ describe('useCountdown 훅 — 순수 계산 로직', () => {
   // expiresAt이 미래인 경우 (정상 카운트다운)
   // ----------------------------------------------------------------
   describe('expiresAt이 미래인 경우 (정상 카운트다운)', () => {
-    it('정확히 1분 후이면 [1, 0]을 반환해야 한다 (오차 1초 이내)', () => {
+    it('정확히 1분 후이면 올바른 카운트다운을 반환해야 한다 (오차 1초 이내)', () => {
       // Arrange — Date.now()의 밀리초 정밀도로 인해 약 ±1초 오차 허용
       const futureDate = new Date(Date.now() + 60 * 1000).toISOString();
 
       // Act
       const [minutes, seconds] = calculateCountdown(futureDate);
 
-      // Assert
-      expect(minutes).toBe(0); // 59초 또는 60초 범위 → minutes=0
+      // Assert — 60초 후 → totalSeconds=59~60 → minutes=0 or 1
       const totalSeconds = minutes * 60 + seconds;
       expect(totalSeconds).toBeGreaterThanOrEqual(59);
       expect(totalSeconds).toBeLessThanOrEqual(60);
+      expect(minutes).toBeGreaterThanOrEqual(0);
+      expect(minutes).toBeLessThanOrEqual(1);
     });
 
     it('정확히 90초 후이면 [1, 29] 또는 [1, 30]을 반환해야 한다', () => {

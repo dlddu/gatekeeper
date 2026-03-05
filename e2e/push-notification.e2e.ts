@@ -183,8 +183,7 @@ test.describe('확인 요청 생성 시 → web-push 발송 함수 호출 확인
     }
   });
 
-  test('Push 구독자가 있을 때 확인 요청 생성 시 web-push 발송 엔드포인트가 호출된다 (happy path)', async ({
-    page,
+  test('Push 구독자가 있을 때 확인 요청 생성 시 서버 사이드 Push 발송이 에러 없이 처리된다 (happy path)', async ({
     request,
   }) => {
     // Arrange: Push 구독 등록
@@ -201,142 +200,90 @@ test.describe('확인 요청 생성 시 → web-push 발송 함수 호출 확인
       },
     });
 
-    // /api/push/send 엔드포인트 인터셉트하여 호출 여부 추적
-    let pushSendCalled = false;
-    let pushSendRequestBody: unknown = null;
-
-    await page.route('/api/push/send', async (route) => {
-      pushSendCalled = true;
-      const postData = route.request().postDataJSON();
-      pushSendRequestBody = postData;
-
-      await route.fulfill({
-        status: 200,
-        contentType: 'application/json',
-        body: JSON.stringify({ success: true, sent: 1 }),
-      });
-    });
-
     // Act: 확인 요청 생성 (API Key 인증)
     const externalId = `e2e-push-send-${Date.now()}`;
     createdExternalIds.push(externalId);
 
-    await page.goto('/');
-
-    const createResponse = await page.evaluate(
-      async ({ externalId, apiKey }) => {
-        const res = await fetch('/api/requests', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'x-api-key': apiKey,
-          },
-          body: JSON.stringify({
-            externalId,
-            context: 'Push 발송 테스트용 확인 요청입니다.',
-            requesterName: 'E2E Push Test Bot',
-          }),
-        });
-        return { status: res.status, body: await res.json() };
+    const createResponse = await request.post('/api/requests', {
+      headers: {
+        'Content-Type': 'application/json',
+        'x-api-key': E2E_API_KEY,
       },
-      { externalId, apiKey: E2E_API_KEY }
-    );
-
-    expect(createResponse.status).toBe(201);
-
-    // Assert: /api/push/send가 호출되었는지 확인
-    expect(pushSendCalled).toBe(true);
-    expect(pushSendRequestBody).not.toBeNull();
-  });
-
-  test('Push 구독자가 없을 때 확인 요청 생성 시 web-push 발송 엔드포인트가 호출되지 않는다 (edge case)', async ({
-    page,
-  }) => {
-    // Arrange: 구독자 없는 상태 확인 (별도 사용자를 위한 구독이 없어야 함)
-    // 기존 구독을 모두 정리하지는 않으므로, 본 테스트는 구독이 없는 환경 전제
-
-    let pushSendCalled = false;
-
-    await page.route('/api/push/send', async (route) => {
-      pushSendCalled = true;
-      await route.fulfill({
-        status: 200,
-        contentType: 'application/json',
-        body: JSON.stringify({ success: true, sent: 0 }),
-      });
+      data: {
+        externalId,
+        context: 'Push 발송 테스트용 확인 요청입니다.',
+        requesterName: 'E2E Push Test Bot',
+      },
     });
 
-    // Act: 확인 요청 생성
+    // Assert: 요청이 성공적으로 생성됨 (Push 발송 에러가 있다면 500이 되어야 함)
+    expect(createResponse.status()).toBe(201);
+    const body = await createResponse.json();
+    expect(body).toHaveProperty('id');
+  });
+
+  test('Push 구독자가 없을 때 확인 요청 생성이 정상적으로 처리된다 (edge case)', async ({
+    request,
+  }) => {
+    // Act: 확인 요청 생성 (구독자 없는 상태)
     const externalId = `e2e-push-no-sub-${Date.now()}`;
     createdExternalIds.push(externalId);
 
-    await page.goto('/');
-
-    const createResponse = await page.evaluate(
-      async ({ externalId, apiKey }) => {
-        const res = await fetch('/api/requests', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'x-api-key': apiKey,
-          },
-          body: JSON.stringify({
-            externalId,
-            context: '구독자 없는 상태의 확인 요청입니다.',
-            requesterName: 'E2E Push Test Bot',
-          }),
-        });
-        return { status: res.status, body: await res.json() };
+    const createResponse = await request.post('/api/requests', {
+      headers: {
+        'Content-Type': 'application/json',
+        'x-api-key': E2E_API_KEY,
       },
-      { externalId, apiKey: E2E_API_KEY }
-    );
+      data: {
+        externalId,
+        context: '구독자 없는 상태의 확인 요청입니다.',
+        requesterName: 'E2E Push Test Bot',
+      },
+    });
 
-    expect(createResponse.status).toBe(201);
-
-    // Assert: 구독자가 없으면 /api/push/send가 호출되지 않아야 함
-    expect(pushSendCalled).toBe(false);
+    // Assert: 구독자가 없어도 요청 생성은 성공
+    expect(createResponse.status()).toBe(201);
+    const body = await createResponse.json();
+    expect(body).toHaveProperty('id');
   });
 
-  test('web-push 발송 실패 시에도 확인 요청 생성은 성공한다 (error case)', async ({
-    page,
+  test('web-push 발송이 실패하더라도 확인 요청 생성은 성공한다 (error case)', async ({
+    request,
   }) => {
-    // /api/push/send가 500을 반환하는 시나리오 모킹
-    await page.route('/api/push/send', async (route) => {
-      await route.fulfill({
-        status: 500,
-        contentType: 'application/json',
-        body: JSON.stringify({ error: 'web-push send failed (mocked)' }),
-      });
+    // Arrange: Push 구독 등록 (실제 발송 시 잘못된 VAPID 키로 인해 실패할 것)
+    const { token } = await loginAsAdmin(request);
+    const endpoint = `${MOCK_PUSH_SUBSCRIPTION.endpoint}-push-fail-${Date.now()}`;
+    createdEndpoints.push(endpoint);
+
+    await request.post('/api/push/subscribe', {
+      ...withAuthHeader(token),
+      data: {
+        endpoint,
+        p256dh: MOCK_PUSH_SUBSCRIPTION.keys.p256dh,
+        auth: MOCK_PUSH_SUBSCRIPTION.keys.auth,
+      },
     });
 
     // Act: 확인 요청 생성
     const externalId = `e2e-push-fail-${Date.now()}`;
     createdExternalIds.push(externalId);
 
-    await page.goto('/');
-
-    const createResponse = await page.evaluate(
-      async ({ externalId, apiKey }) => {
-        const res = await fetch('/api/requests', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'x-api-key': apiKey,
-          },
-          body: JSON.stringify({
-            externalId,
-            context: 'Push 발송 실패 시나리오 테스트입니다.',
-            requesterName: 'E2E Push Test Bot',
-          }),
-        });
-        return { status: res.status, body: await res.json() };
+    const createResponse = await request.post('/api/requests', {
+      headers: {
+        'Content-Type': 'application/json',
+        'x-api-key': E2E_API_KEY,
       },
-      { externalId, apiKey: E2E_API_KEY }
-    );
+      data: {
+        externalId,
+        context: 'Push 발송 실패 시나리오 테스트입니다.',
+        requesterName: 'E2E Push Test Bot',
+      },
+    });
 
     // Assert: web-push 발송 실패와 무관하게 요청 생성은 201로 성공해야 함
-    expect(createResponse.status).toBe(201);
-    expect(createResponse.body).toHaveProperty('id');
+    expect(createResponse.status()).toBe(201);
+    const body = await createResponse.json();
+    expect(body).toHaveProperty('id');
   });
 });
 

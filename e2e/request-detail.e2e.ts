@@ -15,11 +15,11 @@ import { cleanupTestData, createTestRequest, findRequestByExternalId } from './h
  * - 이미 처리된 요청(APPROVED/REJECTED) 접근 시 버튼 비활성화 확인
  * - 만료된 요청 접근 시 "만료됨" 표시 및 버튼 비활성화 확인
  *
- * TODO: DLD-656 구현 완료 후 test.describe.skip → test.describe 로 변경
+ * DLD-657: 구현 완료 — test.describe.skip → test.describe 로 변경됨
  */
 
-// TODO: Activate when DLD-656 is implemented
-test.describe.skip('요청 상세 화면 (/requests/:id)', () => {
+// DLD-657: Activated — implementation complete
+test.describe('요청 상세 화면 (/requests/:id)', () => {
   const createdExternalIds: string[] = [];
 
   test.beforeEach(async ({ page }) => {

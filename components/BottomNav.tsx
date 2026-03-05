@@ -1,9 +1,8 @@
 'use client';
 
-import { usePathname, useRouter } from 'next/navigation';
+import { usePathname } from 'next/navigation';
 
 export default function BottomNav() {
-  const router = useRouter();
   const pathname = usePathname();
 
   const tabs = [
@@ -28,10 +27,11 @@ export default function BottomNav() {
       {tabs.map((tab) => {
         const isActive = pathname === tab.href || (tab.href === '/requests' && pathname?.startsWith('/requests'));
         return (
-          <button
+          <a
             key={tab.href}
-            onClick={() => router.push(tab.href)}
-            className={`flex-1 py-3 text-sm font-medium ${isActive ? 'text-gray-900' : 'text-gray-400'}`}
+            href={tab.href}
+            aria-current={isActive ? 'page' : undefined}
+            className={`flex-1 py-3 text-sm font-medium text-center ${isActive ? 'text-gray-900' : 'text-gray-400'}`}
             style={{
               flex: 1,
               paddingTop: '0.75rem',
@@ -39,13 +39,13 @@ export default function BottomNav() {
               fontSize: '0.875rem',
               fontWeight: 500,
               color: isActive ? '#111827' : '#9ca3af',
-              background: 'none',
-              border: 'none',
-              cursor: 'pointer',
+              textDecoration: 'none',
+              textAlign: 'center',
+              display: 'block',
             }}
           >
             {tab.label}
-          </button>
+          </a>
         );
       })}
     </nav>

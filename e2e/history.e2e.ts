@@ -21,8 +21,7 @@ import { cleanupTestData, createTestRequest, findRequestByExternalId } from './h
  * TODO: DLD-658 구현 완료 후 test.describe.skip → test.describe 로 변경
  */
 
-// TODO: Activate when DLD-658 is implemented
-test.describe.skip('처리 이력 화면 (/history)', () => {
+test.describe('처리 이력 화면 (/history)', () => {
   const createdExternalIds: string[] = [];
 
   test.beforeEach(async ({ page }) => {
@@ -168,7 +167,7 @@ test.describe.skip('처리 이력 화면 (/history)', () => {
   test('처리 이력이 없을 때 빈 상태 UI가 표시된다 (edge case)', async ({ page }) => {
     // Arrange: 이력 API 응답을 빈 배열로 모킹하여 빈 상태 유도
     // NOTE: 구현 시 실제 API 엔드포인트 경로를 확인하여 route 패턴을 조정할 것
-    await page.route('/api/history**', (route) =>
+    await page.route('**/api/me/requests/history**', (route) =>
       route.fulfill({
         status: 200,
         contentType: 'application/json',
@@ -285,7 +284,7 @@ test.describe.skip('처리 이력 화면 (/history)', () => {
     page,
   }) => {
     // Arrange: 이력 API 요청을 강제로 실패시킴 (네트워크 인터셉트)
-    await page.route('/api/history**', (route) => route.abort('failed'));
+    await page.route('**/api/me/requests/history**', (route) => route.abort('failed'));
 
     // Act: 이력 페이지로 이동
     await page.goto('/history');
@@ -297,7 +296,7 @@ test.describe.skip('처리 이력 화면 (/history)', () => {
     await expect(page.getByRole('button', { name: '재시도' })).toBeVisible();
 
     // Act: 라우트 인터셉트 해제 후 재시도 버튼 클릭
-    await page.unroute('/api/history**');
+    await page.unroute('**/api/me/requests/history**');
     await page.getByRole('button', { name: '재시도' }).click();
 
     // Assert: 정상적으로 이력 헤더가 다시 표시됨

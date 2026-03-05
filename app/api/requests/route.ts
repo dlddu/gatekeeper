@@ -1,5 +1,6 @@
 import { NextRequest } from 'next/server';
 import { prisma } from '@/lib/prisma';
+import { sendPushNotifications } from '@/lib/push';
 
 const VALID_STATUSES = ['PENDING', 'APPROVED', 'REJECTED', 'EXPIRED'] as const;
 type RequestStatus = typeof VALID_STATUSES[number];
@@ -51,6 +52,28 @@ export async function POST(request: NextRequest): Promise<Response> {
         expiresAt,
       },
     });
+
+    // userId가 제공된 경우 해당 사용자에게 Push 알림 발송 시도
+    if (userId) {
+      try {
+        const pushSubscriptions = await prisma.pushSubscription.findMany({
+          where: { userId },
+        });
+
+        if (pushSubscriptions.length > 0) {
+          await sendPushNotifications({
+            subscriptions: pushSubscriptions,
+            title: '승인 요청이 도착했습니다',
+            body: context,
+            onExpired: async (endpoint) => {
+              await prisma.pushSubscription.delete({ where: { endpoint } });
+            },
+          });
+        }
+      } catch {
+        // Push 발송 실패는 요청 생성 결과에 영향을 주지 않음
+      }
+    }
 
     return new Response(
       JSON.stringify({

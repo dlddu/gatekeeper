@@ -33,9 +33,15 @@ jobs:
         env:
           JWT_SECRET: test-secret-key-at-least-32-chars-long!!
           API_SECRET_KEY: test-api-secret-key-for-ci
+          VAPID_PUBLIC_KEY: test-vapid-public-key-for-ci
+          VAPID_PRIVATE_KEY: test-vapid-private-key-for-ci
+          VAPID_SUBJECT: mailto:test@example.com
 
       - name: Run tests with coverage
         run: npm run test:coverage
         env:
           JWT_SECRET: test-secret-key-at-least-32-chars-long!!
           API_SECRET_KEY: test-api-secret-key-for-ci
+          VAPID_PUBLIC_KEY: test-vapid-public-key-for-ci
+          VAPID_PRIVATE_KEY: test-vapid-private-key-for-ci
+          VAPID_SUBJECT: mailto:test@example.com

@@ -19,14 +19,13 @@ import { MOCK_PUSH_SUBSCRIPTION } from './helpers/push-mock';
  * - page.route()로 /api/push/send 엔드포인트를 인터셉트하여 web-push 호출 확인
  * - afterEach에서 테스트 생성 PushSubscription 레코드 cleanup 수행
  *
- * TODO: DLD-660 구현 완료 후 test.describe.skip → test.describe 로 변경
+ * Activated for DLD-661
  */
 
 // API 키 (playwright.config.ts의 webServer.env.API_SECRET_KEY와 동일)
 const E2E_API_KEY = process.env.API_SECRET_KEY ?? 'e2e-test-api-key-valid';
 
-// TODO: Activate when DLD-660 is implemented
-test.describe.skip('Push 구독 등록 API → DB 저장 확인', () => {
+test.describe('Push 구독 등록 API → DB 저장 확인', () => {
   /**
    * DLD-660: Push 구독 등록 후 Prisma로 DB에서 PushSubscription 레코드가
    * 실제로 생성되었는지 검증합니다.
@@ -156,8 +155,7 @@ test.describe.skip('Push 구독 등록 API → DB 저장 확인', () => {
   });
 });
 
-// TODO: Activate when DLD-660 is implemented
-test.describe.skip('확인 요청 생성 시 → web-push 발송 함수 호출 확인', () => {
+test.describe('확인 요청 생성 시 → web-push 발송 함수 호출 확인', () => {
   /**
    * DLD-660: POST /api/requests로 확인 요청을 생성할 때,
    * 등록된 Push 구독자에게 web-push 알림이 발송되는지 검증합니다.
@@ -342,8 +340,7 @@ test.describe.skip('확인 요청 생성 시 → web-push 발송 함수 호출 �
   });
 });
 
-// TODO: Activate when DLD-660 is implemented
-test.describe.skip('Push 구독 해제 → DB 삭제 확인', () => {
+test.describe('Push 구독 해제 → DB 삭제 확인', () => {
   /**
    * DLD-660: Push 구독 해제 후 Prisma로 DB에서 PushSubscription 레코드가
    * 실제로 삭제되었는지 검증합니다.

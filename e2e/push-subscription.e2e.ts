@@ -19,11 +19,10 @@ import { setupPushMocks, mockPushSubscriptionRoutes, MOCK_PUSH_SUBSCRIPTION } fr
  * - page.route()로 push 관련 API 엔드포인트 인터셉트
  * - 실제 web-push 패키지 호출 없이 E2E 플로우 검증
  *
- * TODO: DLD-647 구현 완료 후 test.describe.skip → test.describe 로 변경
+ * Activated for DLD-661
  */
 
-// TODO: Activate when DLD-647 is implemented
-test.describe.skip('POST /api/push/subscribe (Push 구독 API)', () => {
+test.describe('POST /api/push/subscribe (Push 구독 API)', () => {
   test('유효한 구독 정보로 등록하면 201을 반환한다 (happy path)', async ({ request }) => {
     const { token } = await loginAsAdmin(request);
 
@@ -127,8 +126,7 @@ test.describe.skip('POST /api/push/subscribe (Push 구독 API)', () => {
   });
 });
 
-// TODO: Activate when DLD-647 is implemented
-test.describe.skip('DELETE /api/push/unsubscribe (Push 구독 해제)', () => {
+test.describe('DELETE /api/push/unsubscribe (Push 구독 해제)', () => {
   test('등록된 구독을 해제하면 200을 반환한다 (happy path)', async ({ request }) => {
     const { token } = await loginAsAdmin(request);
 
@@ -171,8 +169,7 @@ test.describe.skip('DELETE /api/push/unsubscribe (Push 구독 해제)', () => {
   });
 });
 
-// TODO: Activate when DLD-647 is implemented
-test.describe.skip('브라우저 Push 모킹 (page.addInitScript + page.route)', () => {
+test.describe('브라우저 Push 모킹 (page.addInitScript + page.route)', () => {
   test('브라우저 PushManager API가 모킹된 상태로 초기화된다 (happy path)', async ({ page }) => {
     await setupPushMocks(page);
 

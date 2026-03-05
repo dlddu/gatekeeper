@@ -80,13 +80,16 @@ export async function createTestRequest(params: {
   const prisma = await createTestPrismaClient();
 
   try {
+    const status = params.status ?? 'PENDING';
+    const isProcessed = ['APPROVED', 'REJECTED', 'EXPIRED'].includes(status);
     const request = await prisma.request.create({
       data: {
         externalId: params.externalId,
         context: params.context,
         requesterName: params.requesterName,
-        status: params.status ?? 'PENDING',
+        status,
         timeoutSeconds: params.timeoutSeconds,
+        processedAt: isProcessed ? new Date() : undefined,
       },
     });
     return {

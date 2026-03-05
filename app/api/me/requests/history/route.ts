@@ -1,4 +1,5 @@
 import { NextRequest } from 'next/server';
+import { Prisma } from '@prisma/client';
 import { prisma } from '@/lib/prisma';
 import { verifyToken } from '@/lib/auth';
 
@@ -32,15 +33,7 @@ export async function GET(request: NextRequest): Promise<Response> {
   const take = limit + 1; // hasMore 판별을 위해 +1
 
   // Prisma 쿼리 옵션 구성
-  type FindManyArgs = {
-    where: { status: { in: string[] } };
-    orderBy: { processedAt: 'desc' };
-    take: number;
-    cursor?: { id: string };
-    skip?: number;
-  };
-
-  const queryArgs: FindManyArgs = {
+  const queryArgs: Prisma.RequestFindManyArgs = {
     where: {
       status: {
         in: ['APPROVED', 'REJECTED', 'EXPIRED'],

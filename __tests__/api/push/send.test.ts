@@ -3,8 +3,8 @@
  *
  * app/api/push/send/route.ts의 POST 핸들러 동작을 검증합니다.
  * x-api-key 헤더를 통한 API Key 인증으로 내부 서버에서 호출됩니다.
- * 대상 사용자의 모든 PushSubscription에 web-push로 알림을 발송합니다.
- * 실제 DB 연결 없이 prisma와 web-push 모듈을 mock 처리합니다.
+ * 대상 사용자의 모든 PushSubscription에 lib/push.ts를 통해 알림을 발송합니다.
+ * 실제 DB 연결 없이 prisma와 lib/push 모듈을 mock 처리합니다.
  */
 
 // --- Mock 설정 (import보다 먼저 선언되어야 함) ---
@@ -19,10 +19,9 @@ jest.mock('@/lib/prisma', () => ({
   },
 }));
 
-// web-push mock — 모듈이 설치되지 않아도 jest.mock으로 완전히 대체됩니다
-jest.mock('web-push', () => ({
-  setVapidDetails: jest.fn(),
-  sendNotification: jest.fn(),
+// lib/push mock
+jest.mock('@/lib/push', () => ({
+  sendPushNotifications: jest.fn(),
 }));
 
 // --- Import ---
@@ -30,17 +29,11 @@ jest.mock('web-push', () => ({
 import { NextRequest } from 'next/server';
 import { POST } from '@/app/api/push/send/route';
 import { prisma } from '@/lib/prisma';
-
-// eslint-disable-next-line @typescript-eslint/no-require-imports
-const webpush = require('web-push') as {
-  setVapidDetails: jest.Mock;
-  sendNotification: jest.Mock;
-};
+import { sendPushNotifications } from '@/lib/push';
 
 // 타입 캐스팅 헬퍼
 const mockFindMany = prisma.pushSubscription.findMany as jest.Mock;
-const mockDelete = prisma.pushSubscription.delete as jest.Mock;
-const mockSendNotification = webpush.sendNotification;
+const mockSendPushNotifications = sendPushNotifications as jest.Mock;
 
 // --- 테스트 헬퍼 ---
 
@@ -94,6 +87,16 @@ describe('POST /api/push/send', () => {
     process.env.VAPID_PUBLIC_KEY = 'test-vapid-public-key';
     process.env.VAPID_PRIVATE_KEY = 'test-vapid-private-key';
     process.env.VAPID_SUBJECT = 'mailto:test@example.com';
+
+    // Default: sendPushNotifications resolves successfully
+    mockSendPushNotifications.mockImplementation(async (options) => {
+      // Simulate onSuccess callback for each subscription
+      if (options.onSuccess) {
+        for (let i = 0; i < (options.subscriptions?.length ?? 0); i++) {
+          options.onSuccess();
+        }
+      }
+    });
   });
 
   afterEach(() => {
@@ -153,7 +156,7 @@ describe('POST /api/push/send', () => {
       expect(typeof body.error).toBe('string');
     });
 
-    it('API Key 인증 실패 시 sendNotification을 호출하지 않아야 한다', async () => {
+    it('API Key 인증 실패 시 sendPushNotifications를 호출하지 않아야 한다', async () => {
       // Arrange
       const request = makeRequest(validBody, 'wrong-key');
 
@@ -161,7 +164,7 @@ describe('POST /api/push/send', () => {
       await POST(request);
 
       // Assert
-      expect(mockSendNotification).not.toHaveBeenCalled();
+      expect(mockSendPushNotifications).not.toHaveBeenCalled();
     });
   });
 
@@ -169,7 +172,7 @@ describe('POST /api/push/send', () => {
   // 구독자 없음 → 발송 없이 성공
   // ----------------------------------------------------------------
   describe('구독자 없음 (발송 건너뜀)', () => {
-    it('구독자가 없으면 sendNotification을 호출하지 않아야 한다', async () => {
+    it('구독자가 없으면 sendPushNotifications를 호출하지 않아야 한다', async () => {
       // Arrange
       mockFindMany.mockResolvedValue([]);
       const request = makeRequest(validBody, VALID_API_KEY);
@@ -178,7 +181,7 @@ describe('POST /api/push/send', () => {
       await POST(request);
 
       // Assert
-      expect(mockSendNotification).not.toHaveBeenCalled();
+      expect(mockSendPushNotifications).not.toHaveBeenCalled();
     });
 
     it('구독자가 없어도 요청 자체는 성공해야 한다', async () => {
@@ -198,67 +201,42 @@ describe('POST /api/push/send', () => {
   // 정상 발송 (happy path)
   // ----------------------------------------------------------------
   describe('정상 발송', () => {
-    it('구독자가 있으면 sendNotification을 호출해야 한다', async () => {
+    it('구독자가 있으면 sendPushNotifications를 호출해야 한다', async () => {
       // Arrange
       mockFindMany.mockResolvedValue([makeMockSubscription()]);
-      mockSendNotification.mockResolvedValue({});
       const request = makeRequest(validBody, VALID_API_KEY);
 
       // Act
       await POST(request);
 
       // Assert
-      expect(mockSendNotification).toHaveBeenCalledTimes(1);
+      expect(mockSendPushNotifications).toHaveBeenCalledTimes(1);
     });
 
-    it('구독자가 여러 명이면 각 구독마다 sendNotification을 호출해야 한다', async () => {
+    it('sendPushNotifications에 구독 목록이 전달되어야 한다', async () => {
       // Arrange
-      mockFindMany.mockResolvedValue([
+      const subscriptions = [
         makeMockSubscription({ id: 'sub-1', endpoint: 'https://fcm.example.com/1' }),
         makeMockSubscription({ id: 'sub-2', endpoint: 'https://fcm.example.com/2' }),
         makeMockSubscription({ id: 'sub-3', endpoint: 'https://fcm.example.com/3' }),
-      ]);
-      mockSendNotification.mockResolvedValue({});
+      ];
+      mockFindMany.mockResolvedValue(subscriptions);
       const request = makeRequest(validBody, VALID_API_KEY);
 
       // Act
       await POST(request);
 
       // Assert
-      expect(mockSendNotification).toHaveBeenCalledTimes(3);
-    });
-
-    it('sendNotification에 구독 정보(endpoint, p256dh, auth)가 전달되어야 한다', async () => {
-      // Arrange
-      const subscription = makeMockSubscription({
-        endpoint: 'https://fcm.googleapis.com/fcm/send/test-endpoint',
-        p256dh: 'test-p256dh-key',
-        auth: 'test-auth-key',
-      });
-      mockFindMany.mockResolvedValue([subscription]);
-      mockSendNotification.mockResolvedValue({});
-      const request = makeRequest(validBody, VALID_API_KEY);
-
-      // Act
-      await POST(request);
-
-      // Assert
-      expect(mockSendNotification).toHaveBeenCalledWith(
+      expect(mockSendPushNotifications).toHaveBeenCalledWith(
         expect.objectContaining({
-          endpoint: 'https://fcm.googleapis.com/fcm/send/test-endpoint',
-          keys: expect.objectContaining({
-            p256dh: 'test-p256dh-key',
-            auth: 'test-auth-key',
-          }),
-        }),
-        expect.anything()
+          subscriptions,
+        })
       );
     });
 
-    it('sendNotification에 알림 payload(title, body)가 포함되어야 한다', async () => {
+    it('sendPushNotifications에 알림 payload(title, body)가 포함되어야 한다', async () => {
       // Arrange
       mockFindMany.mockResolvedValue([makeMockSubscription()]);
-      mockSendNotification.mockResolvedValue({});
       const request = makeRequest(
         { userId: 'user-admin', title: '알림 제목', body: '알림 내용' },
         VALID_API_KEY
@@ -268,10 +246,7 @@ describe('POST /api/push/send', () => {
       await POST(request);
 
       // Assert
-      const callArgs = mockSendNotification.mock.calls[0];
-      const payload = callArgs[1];
-      const parsedPayload = typeof payload === 'string' ? JSON.parse(payload) : payload;
-      expect(parsedPayload).toMatchObject(
+      expect(mockSendPushNotifications).toHaveBeenCalledWith(
         expect.objectContaining({
           title: '알림 제목',
           body: '알림 내용',
@@ -300,7 +275,6 @@ describe('POST /api/push/send', () => {
     it('발송에 성공하면 200을 반환해야 한다', async () => {
       // Arrange
       mockFindMany.mockResolvedValue([makeMockSubscription()]);
-      mockSendNotification.mockResolvedValue({});
       const request = makeRequest(validBody, VALID_API_KEY);
 
       // Act
@@ -315,47 +289,32 @@ describe('POST /api/push/send', () => {
   // 발송 실패 처리
   // ----------------------------------------------------------------
   describe('발송 실패 처리', () => {
-    it('sendNotification 실패 시에도 200을 반환해야 한다', async () => {
+    it('sendPushNotifications가 onExpired 콜백을 지원해야 한다', async () => {
       // Arrange
       mockFindMany.mockResolvedValue([makeMockSubscription()]);
-      mockSendNotification.mockRejectedValue(new Error('Push delivery failed'));
-      const request = makeRequest(validBody, VALID_API_KEY);
-
-      // Act
-      const response = await POST(request);
-
-      // Assert
-      expect(response.status).toBe(200);
-    });
-
-    it('일부 구독 발송 실패 시에도 나머지 구독에 발송을 시도해야 한다', async () => {
-      // Arrange
-      mockFindMany.mockResolvedValue([
-        makeMockSubscription({ id: 'sub-1', endpoint: 'https://fcm.example.com/1' }),
-        makeMockSubscription({ id: 'sub-2', endpoint: 'https://fcm.example.com/2' }),
-      ]);
-      mockSendNotification
-        .mockRejectedValueOnce(new Error('First subscription failed'))
-        .mockResolvedValueOnce({});
       const request = makeRequest(validBody, VALID_API_KEY);
 
       // Act
       await POST(request);
 
-      // Assert - 실패해도 두 번째 구독에 시도
-      expect(mockSendNotification).toHaveBeenCalledTimes(2);
+      // Assert
+      expect(mockSendPushNotifications).toHaveBeenCalledWith(
+        expect.objectContaining({
+          onExpired: expect.any(Function),
+        })
+      );
     });
 
-    it('410 에러(구독 만료) 발생 시 해당 구독을 DB에서 삭제해야 한다', async () => {
+    it('onExpired 콜백이 호출되면 해당 구독을 DB에서 삭제해야 한다', async () => {
       // Arrange
-      const expiredSubscription = makeMockSubscription({
-        id: 'expired-sub',
-        endpoint: 'https://fcm.example.com/expired',
+      const mockDelete = prisma.pushSubscription.delete as jest.Mock;
+      mockDelete.mockResolvedValue({});
+      mockFindMany.mockResolvedValue([makeMockSubscription()]);
+      mockSendPushNotifications.mockImplementation(async (options) => {
+        if (options.onExpired) {
+          await options.onExpired('https://fcm.example.com/expired');
+        }
       });
-      mockFindMany.mockResolvedValue([expiredSubscription]);
-      const goneError = Object.assign(new Error('Subscription expired'), { statusCode: 410 });
-      mockSendNotification.mockRejectedValue(goneError);
-      mockDelete.mockResolvedValue(expiredSubscription);
       const request = makeRequest(validBody, VALID_API_KEY);
 
       // Act

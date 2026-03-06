@@ -14,6 +14,8 @@ const webpush = require('web-push') as {
   ) => Promise<unknown>;
 };
 
+export const PUSH_TITLE_APPROVAL_REQUEST = '승인 요청이 도착했습니다';
+
 export interface PushSubscriptionRecord {
   endpoint: string;
   p256dh: string;
@@ -25,6 +27,7 @@ export interface SendPushOptions {
   title: string;
   body: string;
   onExpired?: (endpoint: string) => Promise<void>;
+  onSuccess?: () => void;
 }
 
 /**
@@ -33,7 +36,7 @@ export interface SendPushOptions {
  * 410 에러(구독 만료) 발생 시 onExpired 콜백을 호출합니다.
  */
 export async function sendPushNotifications(options: SendPushOptions): Promise<void> {
-  const { subscriptions, title, body, onExpired } = options;
+  const { subscriptions, title, body, onExpired, onSuccess } = options;
 
   const VAPID_SUBJECT = process.env.VAPID_SUBJECT ?? '';
   const VAPID_PUBLIC_KEY = process.env.VAPID_PUBLIC_KEY ?? '';
@@ -55,6 +58,9 @@ export async function sendPushNotifications(options: SendPushOptions): Promise<v
         },
         payload
       );
+      if (onSuccess) {
+        onSuccess();
+      }
     } catch (error: unknown) {
       if (
         typeof error === 'object' &&

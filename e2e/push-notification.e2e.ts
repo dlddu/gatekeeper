@@ -54,7 +54,7 @@ test.describe('Push 구독 등록 API → DB 저장 확인', () => {
     createdEndpoints.push(endpoint);
 
     // Act: 구독 등록 API 호출
-    const response = await request.post('/api/push/subscribe', {
+    const response = await request.post('/api/me/push/subscribe', {
       ...withAuthHeader(token),
       data: {
         endpoint,
@@ -91,7 +91,7 @@ test.describe('Push 구독 등록 API → DB 저장 확인', () => {
     const endpoint = `${MOCK_PUSH_SUBSCRIPTION.endpoint}-userid-check-${Date.now()}`;
     createdEndpoints.push(endpoint);
 
-    await request.post('/api/push/subscribe', {
+    await request.post('/api/me/push/subscribe', {
       ...withAuthHeader(token),
       data: {
         endpoint,
@@ -122,7 +122,7 @@ test.describe('Push 구독 등록 API → DB 저장 확인', () => {
     createdEndpoints.push(endpoint);
 
     // 첫 번째 구독 등록
-    await request.post('/api/push/subscribe', {
+    await request.post('/api/me/push/subscribe', {
       ...withAuthHeader(token),
       data: {
         endpoint,
@@ -132,7 +132,7 @@ test.describe('Push 구독 등록 API → DB 저장 확인', () => {
     });
 
     // 두 번째 구독 등록 (동일 endpoint)
-    await request.post('/api/push/subscribe', {
+    await request.post('/api/me/push/subscribe', {
       ...withAuthHeader(token),
       data: {
         endpoint,
@@ -191,7 +191,7 @@ test.describe('확인 요청 생성 시 → web-push 발송 함수 호출 확인
     const endpoint = `${MOCK_PUSH_SUBSCRIPTION.endpoint}-push-send-check-${Date.now()}`;
     createdEndpoints.push(endpoint);
 
-    await request.post('/api/push/subscribe', {
+    await request.post('/api/me/push/subscribe', {
       ...withAuthHeader(token),
       data: {
         endpoint,
@@ -255,7 +255,7 @@ test.describe('확인 요청 생성 시 → web-push 발송 함수 호출 확인
     const endpoint = `${MOCK_PUSH_SUBSCRIPTION.endpoint}-push-fail-${Date.now()}`;
     createdEndpoints.push(endpoint);
 
-    await request.post('/api/push/subscribe', {
+    await request.post('/api/me/push/subscribe', {
       ...withAuthHeader(token),
       data: {
         endpoint,
@@ -317,7 +317,7 @@ test.describe('Push 구독 해제 → DB 삭제 확인', () => {
     createdEndpoints.push(endpoint);
 
     // Arrange: 구독 등록
-    await request.post('/api/push/subscribe', {
+    await request.post('/api/me/push/subscribe', {
       ...withAuthHeader(token),
       data: {
         endpoint,
@@ -335,7 +335,7 @@ test.describe('Push 구독 해제 → DB 삭제 확인', () => {
       expect(beforeUnsub).not.toBeNull();
 
       // Act: 구독 해제 API 호출
-      const unsubResponse = await request.delete('/api/push/unsubscribe', {
+      const unsubResponse = await request.delete('/api/me/push/unsubscribe', {
         ...withAuthHeader(token),
         data: { endpoint },
       });
@@ -361,7 +361,7 @@ test.describe('Push 구독 해제 → DB 삭제 확인', () => {
     createdEndpoints.push(endpoint);
 
     // Arrange: 구독 등록 → 해제 → 재구독
-    await request.post('/api/push/subscribe', {
+    await request.post('/api/me/push/subscribe', {
       ...withAuthHeader(token),
       data: {
         endpoint,
@@ -370,13 +370,13 @@ test.describe('Push 구독 해제 → DB 삭제 확인', () => {
       },
     });
 
-    await request.delete('/api/push/unsubscribe', {
+    await request.delete('/api/me/push/unsubscribe', {
       ...withAuthHeader(token),
       data: { endpoint },
     });
 
     // Act: 재구독
-    const resubResponse = await request.post('/api/push/subscribe', {
+    const resubResponse = await request.post('/api/me/push/subscribe', {
       ...withAuthHeader(token),
       data: {
         endpoint,
@@ -410,7 +410,7 @@ test.describe('Push 구독 해제 → DB 삭제 확인', () => {
     createdEndpoints.push(endpoint);
 
     // Arrange: 유효한 구독 등록
-    await request.post('/api/push/subscribe', {
+    await request.post('/api/me/push/subscribe', {
       ...withAuthHeader(token),
       data: {
         endpoint,
@@ -420,7 +420,7 @@ test.describe('Push 구독 해제 → DB 삭제 확인', () => {
     });
 
     // Act: 존재하지 않는 endpoint로 해제 시도
-    const unsubResponse = await request.delete('/api/push/unsubscribe', {
+    const unsubResponse = await request.delete('/api/me/push/unsubscribe', {
       ...withAuthHeader(token),
       data: { endpoint: nonExistentEndpoint },
     });

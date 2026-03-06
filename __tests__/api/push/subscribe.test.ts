@@ -1,7 +1,7 @@
 /**
- * POST /api/push/subscribe 라우트 핸들러 테스트
+ * POST /api/me/push/subscribe 라우트 핸들러 테스트
  *
- * app/api/push/subscribe/route.ts의 POST 핸들러 동작을 검증합니다.
+ * app/api/me/push/subscribe/route.ts의 POST 핸들러 동작을 검증합니다.
  * JWT Bearer 인증이 필요한 엔드포인트입니다.
  * 사용자의 Push 구독 정보를 DB에 등록합니다.
  * 실제 DB 연결 없이 prisma와 verifyToken을 mock 처리합니다.
@@ -28,7 +28,7 @@ jest.mock('@/lib/auth', () => ({
 // --- Import ---
 
 import { NextRequest } from 'next/server';
-import { POST } from '@/app/api/push/subscribe/route';
+import { POST } from '@/app/api/me/push/subscribe/route';
 import { prisma } from '@/lib/prisma';
 import { verifyToken } from '@/lib/auth';
 
@@ -52,7 +52,7 @@ function makeRequest(
   if (authHeader !== undefined) {
     headers['Authorization'] = authHeader;
   }
-  return new NextRequest('http://localhost/api/push/subscribe', {
+  return new NextRequest('http://localhost/api/me/push/subscribe', {
     method: 'POST',
     headers,
     body: JSON.stringify(body),
@@ -86,7 +86,7 @@ const verifiedPayload = { userId: 'user-admin', username: 'admin', iat: 1000, ex
 
 // --- 테스트 스위트 ---
 
-describe('POST /api/push/subscribe', () => {
+describe('POST /api/me/push/subscribe', () => {
   const fakeToken = 'valid.jwt.token';
 
   beforeEach(() => {

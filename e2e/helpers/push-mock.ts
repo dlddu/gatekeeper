@@ -131,8 +131,8 @@ export async function mockPushSubscriptionRoutes(
 ): Promise<void> {
   const { failSubscription = false } = options;
 
-  // POST /api/push/subscribe 인터셉트
-  await page.route('/api/push/subscribe', async (route) => {
+  // POST /api/me/push/subscribe 인터셉트
+  await page.route('/api/me/push/subscribe', async (route) => {
     if (failSubscription) {
       await route.fulfill({
         status: 500,
@@ -152,8 +152,8 @@ export async function mockPushSubscriptionRoutes(
     });
   });
 
-  // DELETE /api/push/unsubscribe 인터셉트
-  await page.route('/api/push/unsubscribe', async (route) => {
+  // DELETE /api/me/push/unsubscribe 인터셉트
+  await page.route('/api/me/push/unsubscribe', async (route) => {
     await route.fulfill({
       status: 200,
       contentType: 'application/json',

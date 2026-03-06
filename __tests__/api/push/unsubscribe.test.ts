@@ -1,7 +1,7 @@
 /**
- * DELETE /api/push/unsubscribe 라우트 핸들러 테스트
+ * DELETE /api/me/push/unsubscribe 라우트 핸들러 테스트
  *
- * app/api/push/unsubscribe/route.ts의 DELETE 핸들러 동작을 검증합니다.
+ * app/api/me/push/unsubscribe/route.ts의 DELETE 핸들러 동작을 검증합니다.
  * JWT Bearer 인증이 필요한 엔드포인트입니다.
  * 사용자의 Push 구독 정보를 DB에서 삭제합니다.
  * 실제 DB 연결 없이 prisma와 verifyToken을 mock 처리합니다.
@@ -28,7 +28,7 @@ jest.mock('@/lib/auth', () => ({
 // --- Import ---
 
 import { NextRequest } from 'next/server';
-import { DELETE } from '@/app/api/push/unsubscribe/route';
+import { DELETE } from '@/app/api/me/push/unsubscribe/route';
 import { prisma } from '@/lib/prisma';
 import { verifyToken } from '@/lib/auth';
 
@@ -52,7 +52,7 @@ function makeRequest(
   if (authHeader !== undefined) {
     headers['Authorization'] = authHeader;
   }
-  return new NextRequest('http://localhost/api/push/unsubscribe', {
+  return new NextRequest('http://localhost/api/me/push/unsubscribe', {
     method: 'DELETE',
     headers,
     body: JSON.stringify(body),
@@ -79,7 +79,7 @@ const verifiedPayload = { userId: 'user-admin', username: 'admin', iat: 1000, ex
 
 // --- 테스트 스위트 ---
 
-describe('DELETE /api/push/unsubscribe', () => {
+describe('DELETE /api/me/push/unsubscribe', () => {
   const fakeToken = 'valid.jwt.token';
 
   beforeEach(() => {
@@ -200,6 +200,55 @@ describe('DELETE /api/push/unsubscribe', () => {
         { endpoint: 'https://example.com/not-registered-endpoint' },
         `Bearer ${fakeToken}`
       );
+
+      // Act
+      await DELETE(request);
+
+      // Assert
+      expect(mockPushSubscriptionDelete).not.toHaveBeenCalled();
+    });
+  });
+
+  // ----------------------------------------------------------------
+  // 소유자 검증 실패 → 403
+  // ----------------------------------------------------------------
+  describe('소유자 검증 실패 (403 Forbidden)', () => {
+    it('다른 사용자의 구독을 삭제하려고 하면 403을 반환해야 한다', async () => {
+      // Arrange
+      mockVerifyToken.mockResolvedValue({ userId: 'other-user', username: 'other', iat: 1000, exp: 9999999999 });
+      const subscription = makeMockSubscription({ userId: 'user-admin' });
+      mockPushSubscriptionFindUnique.mockResolvedValue(subscription);
+      const request = makeRequest({ endpoint: validEndpoint }, `Bearer ${fakeToken}`);
+
+      // Act
+      const response = await DELETE(request);
+
+      // Assert
+      expect(response.status).toBe(403);
+    });
+
+    it('403 응답 body에 error 필드가 포함되어야 한다', async () => {
+      // Arrange
+      mockVerifyToken.mockResolvedValue({ userId: 'other-user', username: 'other', iat: 1000, exp: 9999999999 });
+      const subscription = makeMockSubscription({ userId: 'user-admin' });
+      mockPushSubscriptionFindUnique.mockResolvedValue(subscription);
+      const request = makeRequest({ endpoint: validEndpoint }, `Bearer ${fakeToken}`);
+
+      // Act
+      const response = await DELETE(request);
+      const body = await response.json();
+
+      // Assert
+      expect(body).toHaveProperty('error');
+      expect(typeof body.error).toBe('string');
+    });
+
+    it('소유자 검증 실패 시 pushSubscription.delete를 호출하지 않아야 한다', async () => {
+      // Arrange
+      mockVerifyToken.mockResolvedValue({ userId: 'other-user', username: 'other', iat: 1000, exp: 9999999999 });
+      const subscription = makeMockSubscription({ userId: 'user-admin' });
+      mockPushSubscriptionFindUnique.mockResolvedValue(subscription);
+      const request = makeRequest({ endpoint: validEndpoint }, `Bearer ${fakeToken}`);
 
       // Act
       await DELETE(request);

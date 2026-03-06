@@ -1,6 +1,6 @@
 import { NextRequest } from 'next/server';
 import { prisma } from '@/lib/prisma';
-import { sendPushNotifications } from '@/lib/push';
+import { sendPushNotifications, PUSH_TITLE_APPROVAL_REQUEST } from '@/lib/push';
 
 const VALID_STATUSES = ['PENDING', 'APPROVED', 'REJECTED', 'EXPIRED'] as const;
 type RequestStatus = typeof VALID_STATUSES[number];
@@ -63,7 +63,7 @@ export async function POST(request: NextRequest): Promise<Response> {
         if (pushSubscriptions.length > 0) {
           await sendPushNotifications({
             subscriptions: pushSubscriptions,
-            title: '승인 요청이 도착했습니다',
+            title: PUSH_TITLE_APPROVAL_REQUEST,
             body: context,
             onExpired: async (endpoint) => {
               await prisma.pushSubscription.delete({ where: { endpoint } });

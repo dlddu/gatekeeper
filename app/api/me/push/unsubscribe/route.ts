@@ -13,9 +13,10 @@ export async function DELETE(request: NextRequest): Promise<Response> {
   }
 
   const token = authHeader.substring(7);
+  let payload;
 
   try {
-    await verifyToken(token);
+    payload = await verifyToken(token);
   } catch {
     return new Response(JSON.stringify({ error: '유효하지 않은 토큰입니다' }), {
       status: 401,
@@ -34,6 +35,14 @@ export async function DELETE(request: NextRequest): Promise<Response> {
   if (!existing) {
     return new Response(JSON.stringify({ error: '구독 정보를 찾을 수 없습니다' }), {
       status: 404,
+      headers: { 'Content-Type': 'application/json' },
+    });
+  }
+
+  // 소유자 검증: 인증된 사용자만 자신의 구독을 삭제할 수 있음
+  if (existing.userId !== payload.userId) {
+    return new Response(JSON.stringify({ error: '해당 구독을 삭제할 권한이 없습니다' }), {
+      status: 403,
       headers: { 'Content-Type': 'application/json' },
     });
   }

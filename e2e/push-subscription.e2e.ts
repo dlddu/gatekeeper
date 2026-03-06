@@ -9,8 +9,8 @@ import { setupPushMocks, mockPushSubscriptionRoutes, MOCK_PUSH_SUBSCRIPTION } fr
  * 부모 이슈: DLD-645 (Gatekeeper — 승인 게이트웨이 서비스)
  *
  * 커버리지:
- * - POST /api/push/subscribe (Push 구독 등록)
- * - DELETE /api/push/unsubscribe (Push 구독 해제)
+ * - POST /api/me/push/subscribe (Push 구독 등록)
+ * - DELETE /api/me/push/unsubscribe (Push 구독 해제)
  * - 브라우저 PushManager/Notification API 모킹
  * - VAPID 엔드포인트 인터셉트
  *
@@ -19,15 +19,14 @@ import { setupPushMocks, mockPushSubscriptionRoutes, MOCK_PUSH_SUBSCRIPTION } fr
  * - page.route()로 push 관련 API 엔드포인트 인터셉트
  * - 실제 web-push 패키지 호출 없이 E2E 플로우 검증
  *
- * TODO: DLD-647 구현 완료 후 test.describe.skip → test.describe 로 변경
+ * Activated for DLD-661
  */
 
-// TODO: Activate when DLD-647 is implemented
-test.describe.skip('POST /api/push/subscribe (Push 구독 API)', () => {
+test.describe('POST /api/me/push/subscribe (Push 구독 API)', () => {
   test('유효한 구독 정보로 등록하면 201을 반환한다 (happy path)', async ({ request }) => {
     const { token } = await loginAsAdmin(request);
 
-    const response = await request.post('/api/push/subscribe', {
+    const response = await request.post('/api/me/push/subscribe', {
       ...withAuthHeader(token),
       data: {
         endpoint: MOCK_PUSH_SUBSCRIPTION.endpoint,
@@ -49,7 +48,7 @@ test.describe.skip('POST /api/push/subscribe (Push 구독 API)', () => {
     const { token } = await loginAsAdmin(request);
 
     // 첫 번째 구독
-    await request.post('/api/push/subscribe', {
+    await request.post('/api/me/push/subscribe', {
       ...withAuthHeader(token),
       data: {
         endpoint: MOCK_PUSH_SUBSCRIPTION.endpoint,
@@ -59,7 +58,7 @@ test.describe.skip('POST /api/push/subscribe (Push 구독 API)', () => {
     });
 
     // 두 번째 구독 (동일 endpoint)
-    const response = await request.post('/api/push/subscribe', {
+    const response = await request.post('/api/me/push/subscribe', {
       ...withAuthHeader(token),
       data: {
         endpoint: MOCK_PUSH_SUBSCRIPTION.endpoint,
@@ -73,7 +72,7 @@ test.describe.skip('POST /api/push/subscribe (Push 구독 API)', () => {
   });
 
   test('인증 없이 구독 등록하면 401을 반환한다 (error case)', async ({ request }) => {
-    const response = await request.post('/api/push/subscribe', {
+    const response = await request.post('/api/me/push/subscribe', {
       data: {
         endpoint: MOCK_PUSH_SUBSCRIPTION.endpoint,
         p256dh: MOCK_PUSH_SUBSCRIPTION.keys.p256dh,
@@ -87,7 +86,7 @@ test.describe.skip('POST /api/push/subscribe (Push 구독 API)', () => {
   test('endpoint 없이 구독 등록하면 400을 반환한다 (error case)', async ({ request }) => {
     const { token } = await loginAsAdmin(request);
 
-    const response = await request.post('/api/push/subscribe', {
+    const response = await request.post('/api/me/push/subscribe', {
       ...withAuthHeader(token),
       data: {
         p256dh: MOCK_PUSH_SUBSCRIPTION.keys.p256dh,
@@ -101,7 +100,7 @@ test.describe.skip('POST /api/push/subscribe (Push 구독 API)', () => {
   test('p256dh 없이 구독 등록하면 400을 반환한다 (error case)', async ({ request }) => {
     const { token } = await loginAsAdmin(request);
 
-    const response = await request.post('/api/push/subscribe', {
+    const response = await request.post('/api/me/push/subscribe', {
       ...withAuthHeader(token),
       data: {
         endpoint: MOCK_PUSH_SUBSCRIPTION.endpoint,
@@ -115,7 +114,7 @@ test.describe.skip('POST /api/push/subscribe (Push 구독 API)', () => {
   test('auth 없이 구독 등록하면 400을 반환한다 (error case)', async ({ request }) => {
     const { token } = await loginAsAdmin(request);
 
-    const response = await request.post('/api/push/subscribe', {
+    const response = await request.post('/api/me/push/subscribe', {
       ...withAuthHeader(token),
       data: {
         endpoint: MOCK_PUSH_SUBSCRIPTION.endpoint,
@@ -127,13 +126,12 @@ test.describe.skip('POST /api/push/subscribe (Push 구독 API)', () => {
   });
 });
 
-// TODO: Activate when DLD-647 is implemented
-test.describe.skip('DELETE /api/push/unsubscribe (Push 구독 해제)', () => {
+test.describe('DELETE /api/me/push/unsubscribe (Push 구독 해제)', () => {
   test('등록된 구독을 해제하면 200을 반환한다 (happy path)', async ({ request }) => {
     const { token } = await loginAsAdmin(request);
 
     // 먼저 구독 등록
-    await request.post('/api/push/subscribe', {
+    await request.post('/api/me/push/subscribe', {
       ...withAuthHeader(token),
       data: {
         endpoint: `${MOCK_PUSH_SUBSCRIPTION.endpoint}-for-unsub`,
@@ -143,7 +141,7 @@ test.describe.skip('DELETE /api/push/unsubscribe (Push 구독 해제)', () => {
     });
 
     // 구독 해제
-    const response = await request.delete('/api/push/unsubscribe', {
+    const response = await request.delete('/api/me/push/unsubscribe', {
       ...withAuthHeader(token),
       data: { endpoint: `${MOCK_PUSH_SUBSCRIPTION.endpoint}-for-unsub` },
     });
@@ -152,7 +150,7 @@ test.describe.skip('DELETE /api/push/unsubscribe (Push 구독 해제)', () => {
   });
 
   test('인증 없이 구독 해제하면 401을 반환한다 (error case)', async ({ request }) => {
-    const response = await request.delete('/api/push/unsubscribe', {
+    const response = await request.delete('/api/me/push/unsubscribe', {
       data: { endpoint: MOCK_PUSH_SUBSCRIPTION.endpoint },
     });
 
@@ -162,7 +160,7 @@ test.describe.skip('DELETE /api/push/unsubscribe (Push 구독 해제)', () => {
   test('존재하지 않는 endpoint로 해제하면 404를 반환한다 (edge case)', async ({ request }) => {
     const { token } = await loginAsAdmin(request);
 
-    const response = await request.delete('/api/push/unsubscribe', {
+    const response = await request.delete('/api/me/push/unsubscribe', {
       ...withAuthHeader(token),
       data: { endpoint: 'https://nonexistent.endpoint.example.com/push' },
     });
@@ -171,8 +169,7 @@ test.describe.skip('DELETE /api/push/unsubscribe (Push 구독 해제)', () => {
   });
 });
 
-// TODO: Activate when DLD-647 is implemented
-test.describe.skip('브라우저 Push 모킹 (page.addInitScript + page.route)', () => {
+test.describe('브라우저 Push 모킹 (page.addInitScript + page.route)', () => {
   test('브라우저 PushManager API가 모킹된 상태로 초기화된다 (happy path)', async ({ page }) => {
     await setupPushMocks(page);
 
@@ -205,7 +202,7 @@ test.describe.skip('브라우저 Push 모킹 (page.addInitScript + page.route)',
     expect(permission).toBe('granted');
   });
 
-  test('page.route로 /api/push/subscribe 요청이 인터셉트된다 (happy path)', async ({
+  test('page.route로 /api/me/push/subscribe 요청이 인터셉트된다 (happy path)', async ({
     page,
   }) => {
     await mockPushSubscriptionRoutes(page);
@@ -214,7 +211,7 @@ test.describe.skip('브라우저 Push 모킹 (page.addInitScript + page.route)',
 
     // 페이지에서 fetch로 구독 API 호출
     const response = await page.evaluate(async () => {
-      const res = await fetch('/api/push/subscribe', {
+      const res = await fetch('/api/me/push/subscribe', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -239,7 +236,7 @@ test.describe.skip('브라우저 Push 모킹 (page.addInitScript + page.route)',
     await page.goto('/');
 
     const response = await page.evaluate(async () => {
-      const res = await fetch('/api/push/subscribe', {
+      const res = await fetch('/api/me/push/subscribe', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -255,13 +252,13 @@ test.describe.skip('브라우저 Push 모킹 (page.addInitScript + page.route)',
     expect(response.body.error).toMatch(/failed/i);
   });
 
-  test('/api/push/unsubscribe 라우트가 모킹된다 (happy path)', async ({ page }) => {
+  test('/api/me/push/unsubscribe 라우트가 모킹된다 (happy path)', async ({ page }) => {
     await mockPushSubscriptionRoutes(page);
 
     await page.goto('/');
 
     const response = await page.evaluate(async () => {
-      const res = await fetch('/api/push/unsubscribe', {
+      const res = await fetch('/api/me/push/unsubscribe', {
         method: 'DELETE',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ endpoint: 'https://mock.endpoint/push' }),

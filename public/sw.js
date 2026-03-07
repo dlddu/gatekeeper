@@ -23,22 +23,18 @@ self.addEventListener('install', (event) => {
 
 // activate 이벤트: 이전 버전 캐시 정리 및 즉시 제어 획득
 self.addEventListener('activate', (event) => {
-  event.waitUntil(
-    Promise.all([
-      clients.claim(),
-      caches.open(CACHE_NAME)
-    ]).then(([, cache]) => {
-      // /requests만 캐시 (SSR이지만 반드시 필요)
-      // '/'는 리다이렉트이므로 캐시하지 않음
-      // /manifest.json은 정적 파일이므로 빠름
-      return Promise.all([
-        cache.add('/requests').catch(() => {}),
-        cache.add('/manifest.json').catch(() => {})
-      ]);
-    })
-  );
+  // clients.claim()만 waitUntil — 빠르게 'activated' 전환
+  event.waitUntil(clients.claim());
 
-  // 구버전 캐시 정리
+  // 앱 셸 캐싱은 비동기로 (activated 전환을 막지 않음)
+  caches.open(CACHE_NAME).then((cache) => {
+    return Promise.all([
+      cache.add('/requests').catch(() => {}),
+      cache.add('/manifest.json').catch(() => {})
+    ]);
+  });
+
+  // 구버전 캐시 정리 (비동기)
   caches.keys().then((cacheNames) => {
     return Promise.all(
       cacheNames.filter((name) => name !== CACHE_NAME).map((name) => caches.delete(name))

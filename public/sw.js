@@ -22,10 +22,18 @@ self.addEventListener('install', (event) => {
 
 // activate 이벤트: 이전 버전 캐시 정리 및 즉시 제어 획득
 self.addEventListener('activate', (event) => {
-  // clients.claim()만 waitUntil에 포함하여 빠르게 'activated' 상태로 전환
-  event.waitUntil(clients.claim());
+  event.waitUntil(
+    clients.claim().then(() => {
+      // SW 활성화 후 즉시 앱 셸을 캐시
+      return caches.open(CACHE_NAME).then((cache) => {
+        return cache.addAll(APP_SHELL_URLS).catch(() => {
+          // 프리캐시 실패해도 activate는 완료
+        });
+      });
+    })
+  );
 
-  // 구버전 캐시 정리는 비동기로 처리 (activated 전환을 막지 않음)
+  // 구버전 캐시 정리는 비동기
   caches.keys().then((cacheNames) => {
     return Promise.all(
       cacheNames

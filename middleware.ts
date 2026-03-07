@@ -8,6 +8,10 @@ const publicPaths = [
   '/_next',
   '/favicon.ico',
   '/login',
+  '/manifest.json',
+  '/sw.js',
+  '/icons',
+  '/offline',
 ];
 
 function isPublicPath(pathname: string): boolean {

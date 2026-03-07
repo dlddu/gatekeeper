@@ -15,6 +15,8 @@ jest.mock('@/lib/auth', () => ({
   verifyToken: jest.fn(),
 }));
 
+import fs from 'fs';
+import path from 'path';
 import { NextRequest } from 'next/server';
 import { middleware } from '@/middleware';
 
@@ -203,8 +205,6 @@ describe('middleware.ts - 소스 코드 구조 검증', () => {
   let middlewareContent: string;
 
   beforeAll(() => {
-    const fs = require('fs');
-    const path = require('path');
     middlewareContent = fs.readFileSync(
       path.join(process.cwd(), 'middleware.ts'),
       'utf-8'

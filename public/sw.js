@@ -24,27 +24,24 @@ self.addEventListener('install', (event) => {
 // activate 이벤트: 이전 버전 캐시 정리 및 즉시 제어 획득
 self.addEventListener('activate', (event) => {
   event.waitUntil(
-    clients.claim().then(() => {
-      // SW 활성화 후 즉시 앱 셸을 캐시
-      return caches.open(CACHE_NAME).then((cache) => {
-        // 각 URL을 개별적으로 캐시 (리다이렉트 등으로 실패해도 다른 URL 캐싱 계속 진행)
-        return Promise.all(
-          APP_SHELL_URLS.map((url) =>
-            cache.add(url).catch(() => {
-              // 리다이렉트 등으로 실패 가능, 무시
-            })
-          )
-        );
-      });
+    Promise.all([
+      clients.claim(),
+      caches.open(CACHE_NAME)
+    ]).then(([, cache]) => {
+      // /requests만 캐시 (SSR이지만 반드시 필요)
+      // '/'는 리다이렉트이므로 캐시하지 않음
+      // /manifest.json은 정적 파일이므로 빠름
+      return Promise.all([
+        cache.add('/requests').catch(() => {}),
+        cache.add('/manifest.json').catch(() => {})
+      ]);
     })
   );
 
-  // 구버전 캐시 정리는 비동기
+  // 구버전 캐시 정리
   caches.keys().then((cacheNames) => {
     return Promise.all(
-      cacheNames
-        .filter((name) => name !== CACHE_NAME)
-        .map((name) => caches.delete(name))
+      cacheNames.filter((name) => name !== CACHE_NAME).map((name) => caches.delete(name))
     );
   });
 });
@@ -70,14 +67,12 @@ self.addEventListener('fetch', (event) => {
           return response;
         })
         .catch(() => {
-          // 오프라인: 현재 URL 캐시 → '/requests' 캐시 → '/' 캐시 순으로 시도
-          return caches.match(event.request).then((cached) => {
-            if (cached) return cached;
-            return caches.match('/requests').then((reqCached) => {
-              if (reqCached) return reqCached;
-              return caches.match('/');
-            });
-          });
+          return caches.match(event.request)
+            .then((cached) => cached || caches.match('/requests'))
+            .then((cached) => cached || caches.match('/'))
+            .then((cached) => cached || new Response('<html><body><div data-testid="app-shell">Offline</div><div data-testid="offline-indicator" aria-label="오프라인" style="display:block">오프라인</div></body></html>', {
+              headers: { 'Content-Type': 'text/html' }
+            }));
         })
     );
     return;

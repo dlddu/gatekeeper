@@ -8,6 +8,7 @@ const CACHE_NAME = 'gatekeeper-v1';
 // 앱 셸로 프리캐시할 URL 목록 (참조용 - fetch 핸들러 및 클라이언트 측 캐싱에서 사용)
 const APP_SHELL_URLS = [
   '/',
+  '/requests',
   '/manifest.json',
 ];
 
@@ -26,9 +27,14 @@ self.addEventListener('activate', (event) => {
     clients.claim().then(() => {
       // SW 활성화 후 즉시 앱 셸을 캐시
       return caches.open(CACHE_NAME).then((cache) => {
-        return cache.addAll(APP_SHELL_URLS).catch(() => {
-          // 프리캐시 실패해도 activate는 완료
-        });
+        // 각 URL을 개별적으로 캐시 (리다이렉트 등으로 실패해도 다른 URL 캐싱 계속 진행)
+        return Promise.all(
+          APP_SHELL_URLS.map((url) =>
+            cache.add(url).catch(() => {
+              // 리다이렉트 등으로 실패 가능, 무시
+            })
+          )
+        );
       });
     })
   );
@@ -64,8 +70,14 @@ self.addEventListener('fetch', (event) => {
           return response;
         })
         .catch(() => {
-          // 네트워크 실패 시 캐시된 셸로 폴백
-          return caches.match('/');
+          // 오프라인: 현재 URL 캐시 → '/requests' 캐시 → '/' 캐시 순으로 시도
+          return caches.match(event.request).then((cached) => {
+            if (cached) return cached;
+            return caches.match('/requests').then((reqCached) => {
+              if (reqCached) return reqCached;
+              return caches.match('/');
+            });
+          });
         })
     );
     return;

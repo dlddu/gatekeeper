@@ -20,6 +20,8 @@ jest.mock('@/lib/auth', () => ({
 
 // --- Import ---
 
+import fs from 'fs';
+import path from 'path';
 import { NextRequest } from 'next/server';
 import { middleware } from '@/middleware';
 import { verifyToken } from '@/lib/auth';
@@ -142,9 +144,6 @@ describe('middleware.ts PWA public paths', () => {
   // middleware.ts 소스 코드에 공개 경로 등록 여부 확인
   // ----------------------------------------------------------------
   describe('publicPaths array in middleware source', () => {
-    const fs = require('fs');
-    const path = require('path');
-
     let middlewareContent: string;
 
     beforeAll(() => {

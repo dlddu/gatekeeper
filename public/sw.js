@@ -9,8 +9,6 @@ const CACHE_NAME = 'gatekeeper-v1';
 const APP_SHELL_URLS = [
   '/',
   '/manifest.json',
-  '/icons/icon-192x192.png',
-  '/icons/icon-512x512.png',
 ];
 
 // install 이벤트: 앱 셸 리소스를 프리캐시

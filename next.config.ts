@@ -23,7 +23,7 @@ const nextConfig: NextConfig = {
         headers: [
           {
             key: 'Content-Type',
-            value: 'application/manifest+json',
+            value: 'application/json',
           },
         ],
       },

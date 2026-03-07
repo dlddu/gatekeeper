@@ -16,8 +16,35 @@ import fs from 'fs';
 const testDBPath = path.resolve(__dirname, '..', 'e2e-test.db');
 const testDBUrl = `file:${testDBPath}`;
 
+// 최소한의 유효한 1x1 PNG (투명 픽셀)
+const MINIMAL_PNG = Buffer.from(
+  '89504e470d0a1a0a0000000d49484452000000010000000108060000001f15c489' +
+  '0000000a49444154789c626000000002000198e195280000000049454e44ae426082',
+  'hex'
+);
+
+function generatePwaIcons(): void {
+  const iconsDir = path.resolve(__dirname, '..', 'public', 'icons');
+  fs.mkdirSync(iconsDir, { recursive: true });
+
+  const icon192 = path.join(iconsDir, 'icon-192x192.png');
+  const icon512 = path.join(iconsDir, 'icon-512x512.png');
+
+  if (!fs.existsSync(icon192)) {
+    fs.writeFileSync(icon192, MINIMAL_PNG);
+    console.log('[E2E Setup] icon-192x192.png 생성 완료');
+  }
+  if (!fs.existsSync(icon512)) {
+    fs.writeFileSync(icon512, MINIMAL_PNG);
+    console.log('[E2E Setup] icon-512x512.png 생성 완료');
+  }
+}
+
 async function globalSetup(): Promise<void> {
   console.log('\n[E2E Setup] 테스트용 DB 초기화 시작...');
+
+  // PWA 아이콘 파일 생성
+  generatePwaIcons();
 
   // 이전 테스트 DB가 남아 있으면 삭제
   if (fs.existsSync(testDBPath)) {

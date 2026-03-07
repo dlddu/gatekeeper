@@ -55,11 +55,17 @@ export default function RootLayout({
               if ('serviceWorker' in navigator) {
                 window.addEventListener('load', function() {
                   navigator.serviceWorker.register('/sw.js')
-                    .then(function(registration) {
-                      console.log('SW registered:', registration.scope);
+                    .then(function() {
+                      return navigator.serviceWorker.ready;
+                    })
+                    .then(function() {
+                      // SW가 active되면 현재 페이지를 캐시에 저장 (오프라인 폴백용)
+                      return caches.open('gatekeeper-v1').then(function(cache) {
+                        return cache.add('/');
+                      });
                     })
                     .catch(function(error) {
-                      console.log('SW registration failed:', error);
+                      console.log('SW setup error:', error);
                     });
                 });
               }

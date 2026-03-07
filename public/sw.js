@@ -5,22 +5,17 @@
 
 const CACHE_NAME = 'gatekeeper-v1';
 
-// 앱 셸로 프리캐시할 URL 목록
+// 앱 셸로 프리캐시할 URL 목록 (참조용 - fetch 핸들러 및 클라이언트 측 캐싱에서 사용)
 const APP_SHELL_URLS = [
   '/',
   '/manifest.json',
 ];
 
-// install 이벤트: skipWaiting으로 즉시 활성화, 프리캐시 실패해도 설치 계속
+// install 이벤트: 프리캐시 없이 즉시 설치 완료하여 빠르게 activated 상태로 전환
 self.addEventListener('install', (event) => {
-  event.waitUntil(
-    caches.open(CACHE_NAME).then((cache) => {
-      return cache.addAll(APP_SHELL_URLS).catch(() => {
-        // 프리캐시 실패해도 SW 설치는 계속 진행
-        console.log('Pre-cache failed, will cache on first fetch');
-      });
-    })
-  );
+  // waitUntil에 아무것도 넣지 않으면 install이 즉시 완료되어 activate로 바로 진행됨
+  // cache.addAll 및 cache.put은 fetch 핸들러와 클라이언트 측 캐싱에서 사용됨
+  event.waitUntil(Promise.resolve());
   // 새 SW가 즉시 활성화되도록 대기 건너뜀
   self.skipWaiting();
 });

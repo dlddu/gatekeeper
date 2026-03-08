@@ -109,9 +109,17 @@ test.describe('Service Worker 등록 확인', () => {
       }
 
       const registration = await navigator.serviceWorker.ready;
+      const sw = registration.active;
+      if (sw && sw.state !== 'activated') {
+        await new Promise<void>((resolve) => {
+          sw.addEventListener('statechange', () => {
+            if (sw.state === 'activated') resolve();
+          });
+        });
+      }
       return {
         supported: true,
-        state: registration.active?.state ?? null,
+        state: sw?.state ?? null,
       };
     });
 

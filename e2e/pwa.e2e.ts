@@ -11,10 +11,10 @@ import { test, expect } from '@playwright/test';
  * - Service Worker 등록 확인
  * - 오프라인 시 기본 셸 표시 확인
  *
- * TODO: PWA 구현 완료 후 test.describe.skip → test.describe 로 변경
+ * PWA 구현 완료 (DLD-663)
  */
 
-test.describe.skip('manifest.json 검증', () => {
+test.describe('manifest.json 검증', () => {
   test('GET /manifest.json 요청이 200을 반환한다 (happy path)', async ({ request }) => {
     const response = await request.get('/manifest.json');
 
@@ -90,7 +90,7 @@ test.describe.skip('manifest.json 검증', () => {
   });
 });
 
-test.describe.skip('Service Worker 등록 확인', () => {
+test.describe('Service Worker 등록 확인', () => {
   test('/sw.js 파일이 200을 반환한다 (happy path)', async ({ request }) => {
     const response = await request.get('/sw.js');
 
@@ -149,7 +149,7 @@ test.describe.skip('Service Worker 등록 확인', () => {
   });
 });
 
-test.describe.skip('오프라인 시 기본 셸 표시 확인', () => {
+test.describe('오프라인 시 기본 셸 표시 확인', () => {
   test('온라인 상태에서 페이지가 정상적으로 렌더링된다 (happy path)', async ({ page }) => {
     await page.goto('/');
 

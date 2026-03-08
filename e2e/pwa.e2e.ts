@@ -196,9 +196,7 @@ test.describe('오프라인 시 기본 셸 표시 확인', () => {
 
     // Assert: 오프라인 상태 표시 요소가 존재해야 함
     // (구현 시 data-testid="offline-indicator" 또는 aria-label, 텍스트 등으로 식별)
-    const offlineIndicator = page.locator(
-      '[data-testid="offline-indicator"], [aria-label*="오프라인"], text="오프라인"'
-    );
+    const offlineIndicator = page.locator('[data-testid="offline-indicator"]');
     await expect(offlineIndicator).toBeVisible();
 
     // 테스트 후 온라인 상태 복원

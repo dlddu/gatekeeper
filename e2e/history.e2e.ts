@@ -22,6 +22,10 @@ import { cleanupTestData, createTestRequest, findRequestByExternalId } from './h
  */
 
 test.describe('처리 이력 화면 (/history)', () => {
+  // Service Worker의 fetch 이벤트 핸들러가 page.route() 인터셉트를 방해하므로
+  // route mock을 사용하는 테스트가 정상 동작하도록 SW를 비활성화합니다.
+  test.use({ serviceWorkers: 'block' });
+
   const createdExternalIds: string[] = [];
 
   test.beforeEach(async ({ page }) => {

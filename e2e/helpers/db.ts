@@ -199,7 +199,7 @@ export async function restoreRequestsToPending(ids: string[]): Promise<void> {
 
 interface SavedProcessedRequest {
   id: string;
-  status: string;
+  status: 'APPROVED' | 'REJECTED' | 'EXPIRED';
   processedAt: Date | null;
 }
 
@@ -224,7 +224,7 @@ export async function hideAllProcessedRequests(): Promise<SavedProcessedRequest[
       });
     }
 
-    return processed;
+    return processed as SavedProcessedRequest[];
   } finally {
     await prisma.$disconnect();
   }

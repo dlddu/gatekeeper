@@ -199,7 +199,7 @@ export async function restoreRequestsToPending(ids: string[]): Promise<void> {
 
 interface SavedProcessedRequest {
   id: string;
-  status: 'APPROVED' | 'REJECTED' | 'EXPIRED';
+  status: string;
   processedAt: Date | null;
 }
 
@@ -219,7 +219,7 @@ export async function hideAllProcessedRequests(): Promise<SavedProcessedRequest[
 
     if (processed.length > 0) {
       await prisma.request.updateMany({
-        where: { id: { in: processed.map((r: SavedProcessedRequest) => r.id) } },
+        where: { id: { in: processed.map((r) => r.id) } },
         data: { status: 'PENDING', processedAt: null },
       });
     }
@@ -241,7 +241,10 @@ export async function restoreProcessedRequests(saved: SavedProcessedRequest[]): 
     for (const req of saved) {
       await prisma.request.update({
         where: { id: req.id },
-        data: { status: req.status, processedAt: req.processedAt },
+        data: {
+          status: req.status as 'APPROVED' | 'REJECTED' | 'EXPIRED',
+          processedAt: req.processedAt,
+        },
       });
     }
   } finally {

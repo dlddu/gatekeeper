@@ -8,6 +8,9 @@ import path from 'path';
  * 개별 테스트 내에서 DB를 직접 조작해야 할 때 사용합니다.
  * global-setup에서 이미 기본 시드 데이터가 삽입되므로,
  * 이 헬퍼는 테스트별 추가 데이터 삽입/정리에 활용합니다.
+ *
+ * 개선: 싱글톤 PrismaClient를 사용하여 연결 생성/소멸 오버헤드를 제거하고,
+ * 재시도 로직을 추가하여 CI 환경에서의 flaky 테스트를 방지합니다.
  */
 
 const testDBPath = path.resolve(__dirname, '..', '..', 'e2e-test.db');
@@ -28,16 +31,67 @@ export interface TestRequest {
   timeoutSeconds?: number | null;
 }
 
+// 싱글톤 PrismaClient 인스턴스 (연결 생성/소멸 오버헤드 제거)
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+let sharedPrismaClient: any = null;
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+let prismaClientPromise: Promise<any> | null = null;
+
+/**
+ * 싱글톤 Prisma 클라이언트 반환
+ * 최초 호출 시 한 번만 생성하고 이후 재사용합니다.
+ */
+async function getSharedPrismaClient() {
+  if (sharedPrismaClient) return sharedPrismaClient;
+
+  if (!prismaClientPromise) {
+    prismaClientPromise = (async () => {
+      const { PrismaClient } = await import('@prisma/client');
+      const { PrismaLibSql } = await import('@prisma/adapter-libsql');
+
+      const adapter = new PrismaLibSql({ url: testDBUrl });
+      const client = new PrismaClient({ adapter });
+      sharedPrismaClient = client;
+      return client;
+    })();
+  }
+
+  return prismaClientPromise;
+}
+
+/**
+ * DB 작업을 재시도 로직과 함께 실행합니다.
+ * SQLite 파일 잠금이나 CI 환경의 느린 I/O로 인한 일시적 실패를 방지합니다.
+ */
+async function withRetry<T>(
+  operation: () => Promise<T>,
+  { maxRetries = 3, baseDelayMs = 200 }: { maxRetries?: number; baseDelayMs?: number } = {}
+): Promise<T> {
+  let lastError: unknown;
+
+  for (let attempt = 0; attempt <= maxRetries; attempt++) {
+    try {
+      return await operation();
+    } catch (error) {
+      lastError = error;
+
+      if (attempt < maxRetries) {
+        const delay = baseDelayMs * Math.pow(2, attempt);
+        await new Promise((resolve) => setTimeout(resolve, delay));
+      }
+    }
+  }
+
+  throw lastError;
+}
+
 /**
  * 테스트용 Prisma 클라이언트 생성
- * 사용 후 반드시 disconnect() 호출 필요
+ * @deprecated 싱글톤 클라이언트를 사용하므로 직접 호출할 필요가 없습니다.
+ * 하위 호환성을 위해 유지합니다.
  */
 export async function createTestPrismaClient() {
-  const { PrismaClient } = await import('@prisma/client');
-  const { PrismaLibSql } = await import('@prisma/adapter-libsql');
-
-  const adapter = new PrismaLibSql({ url: testDBUrl });
-  return new PrismaClient({ adapter });
+  return getSharedPrismaClient();
 }
 
 /**
@@ -48,10 +102,10 @@ export async function createTestUser(params: {
   password: string;
   displayName: string;
 }): Promise<TestUser> {
-  const prisma = await createTestPrismaClient();
+  const prisma = await getSharedPrismaClient();
   const bcrypt = await import('bcryptjs');
 
-  try {
+  return withRetry(async () => {
     const passwordHash = await bcrypt.hash(params.password, 10);
     const user = await prisma.user.create({
       data: {
@@ -62,9 +116,7 @@ export async function createTestUser(params: {
       select: { id: true, username: true, displayName: true },
     });
     return user;
-  } finally {
-    await prisma.$disconnect();
-  }
+  });
 }
 
 /**
@@ -77,9 +129,9 @@ export async function createTestRequest(params: {
   status?: 'PENDING' | 'APPROVED' | 'REJECTED' | 'EXPIRED';
   timeoutSeconds?: number;
 }): Promise<TestRequest> {
-  const prisma = await createTestPrismaClient();
+  const prisma = await getSharedPrismaClient();
 
-  try {
+  return withRetry(async () => {
     const status = params.status ?? 'PENDING';
     const isProcessed = ['APPROVED', 'REJECTED', 'EXPIRED'].includes(status);
     const request = await prisma.request.create({
@@ -97,18 +149,16 @@ export async function createTestRequest(params: {
       status: request.status as TestRequest['status'],
       timeoutSeconds: request.timeoutSeconds ?? null,
     };
-  } finally {
-    await prisma.$disconnect();
-  }
+  });
 }
 
 /**
  * 특정 externalId로 Request 조회
  */
 export async function findRequestByExternalId(externalId: string): Promise<TestRequest | null> {
-  const prisma = await createTestPrismaClient();
+  const prisma = await getSharedPrismaClient();
 
-  try {
+  return withRetry(async () => {
     const request = await prisma.request.findUnique({ where: { externalId } });
     if (!request) return null;
     return {
@@ -116,37 +166,32 @@ export async function findRequestByExternalId(externalId: string): Promise<TestR
       status: request.status as TestRequest['status'],
       timeoutSeconds: request.timeoutSeconds ?? null,
     };
-  } finally {
-    await prisma.$disconnect();
-  }
+  });
 }
 
 /**
  * 테스트 데이터 정리 (개별 테스트 후 cleanup)
  */
 export async function cleanupTestData(externalIds: string[]): Promise<void> {
-  const prisma = await createTestPrismaClient();
+  if (externalIds.length === 0) return;
+  const prisma = await getSharedPrismaClient();
 
-  try {
+  await withRetry(async () => {
     await prisma.request.deleteMany({
       where: { externalId: { in: externalIds } },
     });
-  } finally {
-    await prisma.$disconnect();
-  }
+  });
 }
 
 /**
  * 테스트용 사용자 삭제
  */
 export async function deleteTestUser(username: string): Promise<void> {
-  const prisma = await createTestPrismaClient();
+  const prisma = await getSharedPrismaClient();
 
-  try {
+  await withRetry(async () => {
     await prisma.user.deleteMany({ where: { username } });
-  } finally {
-    await prisma.$disconnect();
-  }
+  });
 }
 
 /**
@@ -157,9 +202,9 @@ export async function deleteTestUser(username: string): Promise<void> {
 export async function updateAllPendingRequestsStatus(
   newStatus: 'APPROVED' | 'REJECTED' | 'EXPIRED'
 ): Promise<string[]> {
-  const prisma = await createTestPrismaClient();
+  const prisma = await getSharedPrismaClient();
 
-  try {
+  return withRetry(async () => {
     const pendingRequests = await prisma.request.findMany({
       where: { status: 'PENDING' },
       select: { id: true },
@@ -175,9 +220,7 @@ export async function updateAllPendingRequestsStatus(
     }
 
     return ids;
-  } finally {
-    await prisma.$disconnect();
-  }
+  });
 }
 
 /**
@@ -185,16 +228,14 @@ export async function updateAllPendingRequestsStatus(
  */
 export async function restoreRequestsToPending(ids: string[]): Promise<void> {
   if (ids.length === 0) return;
-  const prisma = await createTestPrismaClient();
+  const prisma = await getSharedPrismaClient();
 
-  try {
+  await withRetry(async () => {
     await prisma.request.updateMany({
       where: { id: { in: ids } },
       data: { status: 'PENDING' },
     });
-  } finally {
-    await prisma.$disconnect();
-  }
+  });
 }
 
 interface SavedProcessedRequest {
@@ -209,9 +250,9 @@ interface SavedProcessedRequest {
  * 반환값: 원래 상태 복원에 필요한 데이터
  */
 export async function hideAllProcessedRequests(): Promise<SavedProcessedRequest[]> {
-  const prisma = await createTestPrismaClient();
+  const prisma = await getSharedPrismaClient();
 
-  try {
+  return withRetry(async () => {
     const processed = await prisma.request.findMany({
       where: { status: { in: ['APPROVED', 'REJECTED', 'EXPIRED'] } },
       select: { id: true, status: true, processedAt: true },
@@ -225,9 +266,7 @@ export async function hideAllProcessedRequests(): Promise<SavedProcessedRequest[
     }
 
     return processed as SavedProcessedRequest[];
-  } finally {
-    await prisma.$disconnect();
-  }
+  });
 }
 
 /**
@@ -235,9 +274,9 @@ export async function hideAllProcessedRequests(): Promise<SavedProcessedRequest[
  */
 export async function restoreProcessedRequests(saved: SavedProcessedRequest[]): Promise<void> {
   if (saved.length === 0) return;
-  const prisma = await createTestPrismaClient();
+  const prisma = await getSharedPrismaClient();
 
-  try {
+  await withRetry(async () => {
     for (const req of saved) {
       await prisma.request.update({
         where: { id: req.id },
@@ -247,9 +286,7 @@ export async function restoreProcessedRequests(saved: SavedProcessedRequest[]): 
         },
       });
     }
-  } finally {
-    await prisma.$disconnect();
-  }
+  });
 }
 
 export { testDBUrl, testDBPath };

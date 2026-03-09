@@ -31,7 +31,7 @@ test.describe('요청 상세 화면 (/requests/:id)', () => {
     await expect(page).toHaveURL('/requests');
   });
 
-  test.afterAll(async () => {
+  test.afterEach(async () => {
     await cleanupTestData(createdExternalIds.splice(0));
   });
 

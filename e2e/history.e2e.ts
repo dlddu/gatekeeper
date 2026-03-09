@@ -39,7 +39,7 @@ test.describe('처리 이력 화면 (/history)', () => {
     await expect(page).toHaveURL('/requests');
   });
 
-  test.afterAll(async () => {
+  test.afterEach(async () => {
     await cleanupTestData(createdExternalIds.splice(0));
   });
 

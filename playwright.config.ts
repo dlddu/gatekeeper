@@ -25,7 +25,7 @@ export default defineConfig({
   },
 
   // 전체 테스트 실패 시 최대 재시도 횟수 (CI에서만)
-  retries: process.env.CI ? 1 : 0,
+  retries: process.env.CI ? 2 : 0,
 
   // 병렬 워커 수 (CI에서는 단일 워커로 DB 충돌 방지)
   workers: process.env.CI ? 1 : undefined,

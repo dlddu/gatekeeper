@@ -51,6 +51,11 @@ async function getSharedPrismaClient() {
 
       const adapter = new PrismaLibSql({ url: testDBUrl });
       const client = new PrismaClient({ adapter });
+
+      // SQLite busy_timeout 설정: 다른 프로세스(웹 서버)가 쓰기 잠금을 보유할 때
+      // 즉시 실패하지 않고 최대 5초까지 대기합니다.
+      await client.$executeRawUnsafe('PRAGMA busy_timeout = 5000');
+
       sharedPrismaClient = client;
       return client;
     })();
@@ -65,7 +70,7 @@ async function getSharedPrismaClient() {
  */
 async function withRetry<T>(
   operation: () => Promise<T>,
-  { maxRetries = 3, baseDelayMs = 200 }: { maxRetries?: number; baseDelayMs?: number } = {}
+  { maxRetries = 3, baseDelayMs = 500 }: { maxRetries?: number; baseDelayMs?: number } = {}
 ): Promise<T> {
   let lastError: unknown;
 

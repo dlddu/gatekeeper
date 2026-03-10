@@ -260,7 +260,7 @@ export async function hideAllProcessedRequests(): Promise<SavedProcessedRequest[
 
     if (processed.length > 0) {
       await prisma.request.updateMany({
-        where: { id: { in: processed.map((r) => r.id) } },
+        where: { id: { in: processed.map((r: { id: string }) => r.id) } },
         data: { status: 'PENDING', processedAt: null },
       });
     }

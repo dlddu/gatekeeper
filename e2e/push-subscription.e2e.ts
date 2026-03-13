@@ -2,6 +2,9 @@ import { test, expect } from '@playwright/test';
 import { loginAsAdmin, withAuthHeader } from './helpers/auth';
 import { setupPushMocks, mockPushSubscriptionRoutes, MOCK_PUSH_SUBSCRIPTION } from './helpers/push-mock';
 
+// DB에 쓰는 테스트는 serial로 실행하여 timeout 방지
+test.describe.configure({ mode: 'serial' });
+
 /**
  * Web Push 구독 E2E 테스트
  *

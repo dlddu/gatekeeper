@@ -3,6 +3,9 @@ import { loginAsAdmin, withAuthHeader } from './helpers/auth';
 import { createTestPrismaClient } from './helpers/db';
 import { MOCK_PUSH_SUBSCRIPTION } from './helpers/push-mock';
 
+// DB에 쓰는 테스트는 serial로 실행하여 timeout 방지
+test.describe.configure({ mode: 'serial' });
+
 /**
  * Push Notification E2E 테스트
  *

@@ -8,6 +8,9 @@ import {
   restoreProcessedRequests,
 } from './helpers/db';
 
+// DB에 쓰는 테스트는 serial로 실행하여 timeout 방지
+test.describe.configure({ mode: 'serial' });
+
 /**
  * 처리 이력 화면 E2E 테스트
  *

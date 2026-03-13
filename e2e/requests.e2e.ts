@@ -2,6 +2,9 @@ import { test, expect } from '@playwright/test';
 import { loginAsAdmin, withAuthHeader } from './helpers/auth';
 import { cleanupTestData, createTestRequest } from './helpers/db';
 
+// DB에 쓰는 테스트는 serial로 실행하여 timeout 방지
+test.describe.configure({ mode: 'serial' });
+
 /**
  * Request API E2E 테스트
  *

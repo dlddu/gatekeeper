@@ -2,6 +2,9 @@ import { test, expect } from '@playwright/test';
 import { TEST_USERS } from './helpers/auth';
 import { cleanupTestData, createTestRequest, findRequestByExternalId } from './helpers/db';
 
+// DB에 쓰는 테스트는 serial로 실행하여 timeout 방지
+test.describe.configure({ mode: 'serial' });
+
 /**
  * 요청 상세 및 승인/거절 화면 E2E 테스트
  *

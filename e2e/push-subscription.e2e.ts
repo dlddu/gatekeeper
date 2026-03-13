@@ -23,7 +23,7 @@ import { setupPushMocks, mockPushSubscriptionRoutes, MOCK_PUSH_SUBSCRIPTION } fr
  */
 
 test.describe('POST /api/me/push/subscribe (Push 구독 API)', () => {
-  test('유효한 구독 정보로 등록하면 201을 반환한다 (happy path)', async ({ request }) => {
+  test('유효한 구독 정보로 등록하면 200을 반환한다 (happy path)', async ({ request }) => {
     const { token } = await loginAsAdmin(request);
 
     const response = await request.post('/api/me/push/subscribe', {
@@ -35,7 +35,7 @@ test.describe('POST /api/me/push/subscribe (Push 구독 API)', () => {
       },
     });
 
-    expect(response.status()).toBe(201);
+    expect(response.status()).toBe(200);
 
     const body = await response.json();
     expect(body).toHaveProperty('id');
@@ -67,8 +67,8 @@ test.describe('POST /api/me/push/subscribe (Push 구독 API)', () => {
       },
     });
 
-    // 409 Conflict 또는 200 OK (upsert) 중 하나
-    expect([200, 201, 409]).toContain(response.status());
+    // upsert이므로 항상 200 OK
+    expect(response.status()).toBe(200);
   });
 
   test('인증 없이 구독 등록하면 401을 반환한다 (error case)', async ({ request }) => {

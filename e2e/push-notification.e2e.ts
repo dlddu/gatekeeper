@@ -63,7 +63,7 @@ test.describe('Push 구독 등록 API → DB 저장 확인', () => {
       },
     });
 
-    expect(response.status()).toBe(201);
+    expect(response.status()).toBe(200);
 
     // Assert: DB에서 PushSubscription 레코드 조회하여 저장 확인
     const prisma = await createTestPrismaClient();
@@ -385,7 +385,7 @@ test.describe('Push 구독 해제 → DB 삭제 확인', () => {
       },
     });
 
-    expect(resubResponse.status()).toBe(201);
+    expect(resubResponse.status()).toBe(200);
 
     // Assert: DB에 새 레코드가 생성되었는지 확인
     const prisma = await createTestPrismaClient();

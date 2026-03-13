@@ -13,6 +13,27 @@ import path from 'path';
 const testDBPath = path.resolve(__dirname, '..', '..', 'e2e-test.db');
 const testDBUrl = `file:${testDBPath}`;
 
+/**
+ * SQLite write lock 경합 시 재시도하는 래퍼
+ * 테스트 헬퍼와 Next.js 서버가 동시에 같은 DB에 접근할 때 timeout 방지
+ */
+async function withRetry<T>(fn: () => Promise<T>, maxRetries = 3): Promise<T> {
+  for (let attempt = 0; attempt <= maxRetries; attempt++) {
+    try {
+      return await fn();
+    } catch (error: unknown) {
+      const isTimeout =
+        error instanceof Error &&
+        (error.message.includes('timed out') ||
+          error.message.includes('SQLITE_BUSY') ||
+          error.message.includes('database is locked'));
+      if (!isTimeout || attempt === maxRetries) throw error;
+      await new Promise((r) => setTimeout(r, 500 * 2 ** attempt));
+    }
+  }
+  throw new Error('withRetry: unreachable');
+}
+
 export interface TestUser {
   id: string;
   username: string;
@@ -53,15 +74,16 @@ export async function createTestUser(params: {
 
   try {
     const passwordHash = await bcrypt.hash(params.password, 10);
-    const user = await prisma.user.create({
-      data: {
-        username: params.username,
-        passwordHash,
-        displayName: params.displayName,
-      },
-      select: { id: true, username: true, displayName: true },
-    });
-    return user;
+    return await withRetry(() =>
+      prisma.user.create({
+        data: {
+          username: params.username,
+          passwordHash,
+          displayName: params.displayName,
+        },
+        select: { id: true, username: true, displayName: true },
+      })
+    );
   } finally {
     await prisma.$disconnect();
   }
@@ -82,16 +104,18 @@ export async function createTestRequest(params: {
   try {
     const status = params.status ?? 'PENDING';
     const isProcessed = ['APPROVED', 'REJECTED', 'EXPIRED'].includes(status);
-    const request = await prisma.request.create({
-      data: {
-        externalId: params.externalId,
-        context: params.context,
-        requesterName: params.requesterName,
-        status,
-        timeoutSeconds: params.timeoutSeconds,
-        processedAt: isProcessed ? new Date() : undefined,
-      },
-    });
+    const request = await withRetry(() =>
+      prisma.request.create({
+        data: {
+          externalId: params.externalId,
+          context: params.context,
+          requesterName: params.requesterName,
+          status,
+          timeoutSeconds: params.timeoutSeconds,
+          processedAt: isProcessed ? new Date() : undefined,
+        },
+      })
+    );
     return {
       ...request,
       status: request.status as TestRequest['status'],
@@ -128,9 +152,11 @@ export async function cleanupTestData(externalIds: string[]): Promise<void> {
   const prisma = await createTestPrismaClient();
 
   try {
-    await prisma.request.deleteMany({
-      where: { externalId: { in: externalIds } },
-    });
+    await withRetry(() =>
+      prisma.request.deleteMany({
+        where: { externalId: { in: externalIds } },
+      })
+    );
   } finally {
     await prisma.$disconnect();
   }
@@ -143,7 +169,7 @@ export async function deleteTestUser(username: string): Promise<void> {
   const prisma = await createTestPrismaClient();
 
   try {
-    await prisma.user.deleteMany({ where: { username } });
+    await withRetry(() => prisma.user.deleteMany({ where: { username } }));
   } finally {
     await prisma.$disconnect();
   }
@@ -168,10 +194,12 @@ export async function updateAllPendingRequestsStatus(
     const ids = pendingRequests.map((r: { id: string }) => r.id);
 
     if (ids.length > 0) {
-      await prisma.request.updateMany({
-        where: { id: { in: ids } },
-        data: { status: newStatus },
-      });
+      await withRetry(() =>
+        prisma.request.updateMany({
+          where: { id: { in: ids } },
+          data: { status: newStatus },
+        })
+      );
     }
 
     return ids;
@@ -188,10 +216,12 @@ export async function restoreRequestsToPending(ids: string[]): Promise<void> {
   const prisma = await createTestPrismaClient();
 
   try {
-    await prisma.request.updateMany({
-      where: { id: { in: ids } },
-      data: { status: 'PENDING' },
-    });
+    await withRetry(() =>
+      prisma.request.updateMany({
+        where: { id: { in: ids } },
+        data: { status: 'PENDING' },
+      })
+    );
   } finally {
     await prisma.$disconnect();
   }
@@ -218,10 +248,12 @@ export async function hideAllProcessedRequests(): Promise<SavedProcessedRequest[
     });
 
     if (processed.length > 0) {
-      await prisma.request.updateMany({
-        where: { id: { in: processed.map((r) => r.id) } },
-        data: { status: 'PENDING', processedAt: null },
-      });
+      await withRetry(() =>
+        prisma.request.updateMany({
+          where: { id: { in: processed.map((r) => r.id) } },
+          data: { status: 'PENDING', processedAt: null },
+        })
+      );
     }
 
     return processed as SavedProcessedRequest[];
@@ -239,17 +271,19 @@ export async function restoreProcessedRequests(saved: SavedProcessedRequest[]): 
 
   try {
     for (const req of saved) {
-      await prisma.request.update({
-        where: { id: req.id },
-        data: {
-          status: req.status as 'APPROVED' | 'REJECTED' | 'EXPIRED',
-          processedAt: req.processedAt,
-        },
-      });
+      await withRetry(() =>
+        prisma.request.update({
+          where: { id: req.id },
+          data: {
+            status: req.status as 'APPROVED' | 'REJECTED' | 'EXPIRED',
+            processedAt: req.processedAt,
+          },
+        })
+      );
     }
   } finally {
     await prisma.$disconnect();
   }
 }
 
-export { testDBUrl, testDBPath };
+export { testDBUrl, testDBPath, withRetry };

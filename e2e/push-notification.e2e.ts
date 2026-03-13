@@ -1,6 +1,6 @@
 import { test, expect } from '@playwright/test';
 import { loginAsAdmin, withAuthHeader } from './helpers/auth';
-import { createTestPrismaClient } from './helpers/db';
+import { createTestPrismaClient, withRetry } from './helpers/db';
 import { MOCK_PUSH_SUBSCRIPTION } from './helpers/push-mock';
 
 // DB에 쓰는 테스트는 serial로 실행하여 timeout 방지
@@ -41,9 +41,11 @@ test.describe('Push 구독 등록 API → DB 저장 확인', () => {
 
     const prisma = await createTestPrismaClient();
     try {
-      await prisma.pushSubscription.deleteMany({
-        where: { endpoint: { in: createdEndpoints.splice(0) } },
-      });
+      await withRetry(() =>
+        prisma.pushSubscription.deleteMany({
+          where: { endpoint: { in: createdEndpoints.splice(0) } },
+        })
+      );
     } finally {
       await prisma.$disconnect();
     }
@@ -172,14 +174,18 @@ test.describe('확인 요청 생성 시 → web-push 발송 함수 호출 확인
     const prisma = await createTestPrismaClient();
     try {
       if (createdEndpoints.length > 0) {
-        await prisma.pushSubscription.deleteMany({
-          where: { endpoint: { in: createdEndpoints.splice(0) } },
-        });
+        await withRetry(() =>
+          prisma.pushSubscription.deleteMany({
+            where: { endpoint: { in: createdEndpoints.splice(0) } },
+          })
+        );
       }
       if (createdExternalIds.length > 0) {
-        await prisma.request.deleteMany({
-          where: { externalId: { in: createdExternalIds.splice(0) } },
-        });
+        await withRetry(() =>
+          prisma.request.deleteMany({
+            where: { externalId: { in: createdExternalIds.splice(0) } },
+          })
+        );
       }
     } finally {
       await prisma.$disconnect();
@@ -304,9 +310,11 @@ test.describe('Push 구독 해제 → DB 삭제 확인', () => {
     // 남은 레코드가 있을 경우 cleanup (이미 삭제되었으면 no-op)
     const prisma = await createTestPrismaClient();
     try {
-      await prisma.pushSubscription.deleteMany({
-        where: { endpoint: { in: createdEndpoints.splice(0) } },
-      });
+      await withRetry(() =>
+        prisma.pushSubscription.deleteMany({
+          where: { endpoint: { in: createdEndpoints.splice(0) } },
+        })
+      );
     } finally {
       await prisma.$disconnect();
     }

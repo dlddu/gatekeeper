@@ -37,13 +37,9 @@ test.describe('Push 구독 등록 API → DB 저장 확인', () => {
     if (createdEndpoints.length === 0) return;
 
     const prisma = await createTestPrismaClient();
-    try {
-      await prisma.pushSubscription.deleteMany({
-        where: { endpoint: { in: createdEndpoints.splice(0) } },
-      });
-    } finally {
-      await prisma.$disconnect();
-    }
+    await prisma.pushSubscription.deleteMany({
+      where: { endpoint: { in: createdEndpoints.splice(0) } },
+    });
   });
 
   test('유효한 구독 정보로 등록하면 DB에 PushSubscription 레코드가 생성된다 (happy path)', async ({
@@ -67,21 +63,17 @@ test.describe('Push 구독 등록 API → DB 저장 확인', () => {
 
     // Assert: DB에서 PushSubscription 레코드 조회하여 저장 확인
     const prisma = await createTestPrismaClient();
-    try {
-      const subscription = await prisma.pushSubscription.findUnique({
-        where: { endpoint },
-      });
+    const subscription = await prisma.pushSubscription.findUnique({
+      where: { endpoint },
+    });
 
-      expect(subscription).not.toBeNull();
-      expect(subscription?.endpoint).toBe(endpoint);
-      expect(subscription?.p256dh).toBe(MOCK_PUSH_SUBSCRIPTION.keys.p256dh);
-      expect(subscription?.auth).toBe(MOCK_PUSH_SUBSCRIPTION.keys.auth);
-      expect(subscription?.userId).toBeTruthy();
-      expect(subscription?.id).toBeTruthy();
-      expect(subscription?.createdAt).toBeTruthy();
-    } finally {
-      await prisma.$disconnect();
-    }
+    expect(subscription).not.toBeNull();
+    expect(subscription?.endpoint).toBe(endpoint);
+    expect(subscription?.p256dh).toBe(MOCK_PUSH_SUBSCRIPTION.keys.p256dh);
+    expect(subscription?.auth).toBe(MOCK_PUSH_SUBSCRIPTION.keys.auth);
+    expect(subscription?.userId).toBeTruthy();
+    expect(subscription?.id).toBeTruthy();
+    expect(subscription?.createdAt).toBeTruthy();
   });
 
   test('구독 등록 후 DB에 저장된 userId가 인증된 사용자의 ID와 일치한다 (happy path)', async ({
@@ -102,16 +94,12 @@ test.describe('Push 구독 등록 API → DB 저장 확인', () => {
 
     // Assert: DB의 userId가 로그인한 사용자의 ID와 일치하는지 확인
     const prisma = await createTestPrismaClient();
-    try {
-      const subscription = await prisma.pushSubscription.findUnique({
-        where: { endpoint },
-      });
+    const subscription = await prisma.pushSubscription.findUnique({
+      where: { endpoint },
+    });
 
-      expect(subscription).not.toBeNull();
-      expect(subscription?.userId).toBe(userId);
-    } finally {
-      await prisma.$disconnect();
-    }
+    expect(subscription).not.toBeNull();
+    expect(subscription?.userId).toBe(userId);
   });
 
   test('동일한 endpoint로 중복 구독 시 DB에 레코드가 하나만 존재한다 (edge case)', async ({
@@ -143,15 +131,11 @@ test.describe('Push 구독 등록 API → DB 저장 확인', () => {
 
     // Assert: DB에 동일 endpoint 레코드가 정확히 하나만 존재
     const prisma = await createTestPrismaClient();
-    try {
-      const subscriptions = await prisma.pushSubscription.findMany({
-        where: { endpoint },
-      });
+    const subscriptions = await prisma.pushSubscription.findMany({
+      where: { endpoint },
+    });
 
-      expect(subscriptions).toHaveLength(1);
-    } finally {
-      await prisma.$disconnect();
-    }
+    expect(subscriptions).toHaveLength(1);
   });
 });
 
@@ -167,19 +151,15 @@ test.describe('확인 요청 생성 시 → web-push 발송 함수 호출 확인
 
   test.afterEach(async () => {
     const prisma = await createTestPrismaClient();
-    try {
-      if (createdEndpoints.length > 0) {
-        await prisma.pushSubscription.deleteMany({
-          where: { endpoint: { in: createdEndpoints.splice(0) } },
-        });
-      }
-      if (createdExternalIds.length > 0) {
-        await prisma.request.deleteMany({
-          where: { externalId: { in: createdExternalIds.splice(0) } },
-        });
-      }
-    } finally {
-      await prisma.$disconnect();
+    if (createdEndpoints.length > 0) {
+      await prisma.pushSubscription.deleteMany({
+        where: { endpoint: { in: createdEndpoints.splice(0) } },
+      });
+    }
+    if (createdExternalIds.length > 0) {
+      await prisma.request.deleteMany({
+        where: { externalId: { in: createdExternalIds.splice(0) } },
+      });
     }
   });
 
@@ -300,13 +280,9 @@ test.describe('Push 구독 해제 → DB 삭제 확인', () => {
 
     // 남은 레코드가 있을 경우 cleanup (이미 삭제되었으면 no-op)
     const prisma = await createTestPrismaClient();
-    try {
-      await prisma.pushSubscription.deleteMany({
-        where: { endpoint: { in: createdEndpoints.splice(0) } },
-      });
-    } finally {
-      await prisma.$disconnect();
-    }
+    await prisma.pushSubscription.deleteMany({
+      where: { endpoint: { in: createdEndpoints.splice(0) } },
+    });
   });
 
   test('구독 해제 후 DB에서 PushSubscription 레코드가 삭제된다 (happy path)', async ({
@@ -328,29 +304,25 @@ test.describe('Push 구독 해제 → DB 삭제 확인', () => {
 
     // 등록 확인
     const prisma = await createTestPrismaClient();
-    try {
-      const beforeUnsub = await prisma.pushSubscription.findUnique({
-        where: { endpoint },
-      });
-      expect(beforeUnsub).not.toBeNull();
+    const beforeUnsub = await prisma.pushSubscription.findUnique({
+      where: { endpoint },
+    });
+    expect(beforeUnsub).not.toBeNull();
 
-      // Act: 구독 해제 API 호출
-      const unsubResponse = await request.delete('/api/me/push/unsubscribe', {
-        ...withAuthHeader(token),
-        data: { endpoint },
-      });
+    // Act: 구독 해제 API 호출
+    const unsubResponse = await request.delete('/api/me/push/unsubscribe', {
+      ...withAuthHeader(token),
+      data: { endpoint },
+    });
 
-      expect(unsubResponse.status()).toBe(200);
+    expect(unsubResponse.status()).toBe(200);
 
-      // Assert: DB에서 레코드가 삭제되었는지 확인
-      const afterUnsub = await prisma.pushSubscription.findUnique({
-        where: { endpoint },
-      });
+    // Assert: DB에서 레코드가 삭제되었는지 확인
+    const afterUnsub = await prisma.pushSubscription.findUnique({
+      where: { endpoint },
+    });
 
-      expect(afterUnsub).toBeNull();
-    } finally {
-      await prisma.$disconnect();
-    }
+    expect(afterUnsub).toBeNull();
   });
 
   test('구독 해제 후 동일 endpoint로 재구독하면 새 레코드가 생성된다 (edge case)', async ({
@@ -389,16 +361,12 @@ test.describe('Push 구독 해제 → DB 삭제 확인', () => {
 
     // Assert: DB에 새 레코드가 생성되었는지 확인
     const prisma = await createTestPrismaClient();
-    try {
-      const subscription = await prisma.pushSubscription.findUnique({
-        where: { endpoint },
-      });
+    const subscription = await prisma.pushSubscription.findUnique({
+      where: { endpoint },
+    });
 
-      expect(subscription).not.toBeNull();
-      expect(subscription?.endpoint).toBe(endpoint);
-    } finally {
-      await prisma.$disconnect();
-    }
+    expect(subscription).not.toBeNull();
+    expect(subscription?.endpoint).toBe(endpoint);
   });
 
   test('존재하지 않는 endpoint 해제 시 DB 레코드에 변화가 없다 (error case)', async ({
@@ -429,14 +397,10 @@ test.describe('Push 구독 해제 → DB 삭제 확인', () => {
 
     // Assert: 기존에 등록된 유효한 구독은 그대로 유지
     const prisma = await createTestPrismaClient();
-    try {
-      const subscription = await prisma.pushSubscription.findUnique({
-        where: { endpoint },
-      });
+    const subscription = await prisma.pushSubscription.findUnique({
+      where: { endpoint },
+    });
 
-      expect(subscription).not.toBeNull();
-    } finally {
-      await prisma.$disconnect();
-    }
+    expect(subscription).not.toBeNull();
   });
 });

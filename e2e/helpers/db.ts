@@ -29,15 +29,39 @@ export interface TestRequest {
 }
 
 /**
- * 테스트용 Prisma 클라이언트 생성
- * 사용 후 반드시 disconnect() 호출 필요
+ * SQLite 잠금 경합(lock contention) 시 재시도하는 유틸리티.
+ * 웹 서버와 테스트 헬퍼가 동일 SQLite 파일에 동시 접근할 때
+ * 발생하는 타임아웃을 완화합니다.
+ */
+async function withRetry<T>(fn: () => Promise<T>, maxRetries = 3, delayMs = 500): Promise<T> {
+  for (let attempt = 1; attempt <= maxRetries; attempt++) {
+    try {
+      return await fn();
+    } catch (error: unknown) {
+      const isTimeout = error instanceof Error && error.message.includes('timed out');
+      if (!isTimeout || attempt === maxRetries) throw error;
+      await new Promise((r) => setTimeout(r, delayMs * attempt));
+    }
+  }
+  throw new Error('unreachable');
+}
+
+// 모듈 레벨 싱글턴 — 매번 새 PrismaClient를 생성/파괴하지 않고 재사용
+let sharedPrisma: import('@prisma/client').PrismaClient | null = null;
+
+/**
+ * 테스트용 공유 Prisma 클라이언트 반환 (싱글턴)
+ * 매 호출마다 새 인스턴스를 만들지 않아 SQLite 잠금 경합을 줄입니다.
  */
 export async function createTestPrismaClient() {
-  const { PrismaClient } = await import('@prisma/client');
-  const { PrismaLibSql } = await import('@prisma/adapter-libsql');
+  if (!sharedPrisma) {
+    const { PrismaClient } = await import('@prisma/client');
+    const { PrismaLibSql } = await import('@prisma/adapter-libsql');
 
-  const adapter = new PrismaLibSql({ url: testDBUrl });
-  return new PrismaClient({ adapter });
+    const adapter = new PrismaLibSql({ url: testDBUrl });
+    sharedPrisma = new PrismaClient({ adapter });
+  }
+  return sharedPrisma;
 }
 
 /**
@@ -51,7 +75,7 @@ export async function createTestUser(params: {
   const prisma = await createTestPrismaClient();
   const bcrypt = await import('bcryptjs');
 
-  try {
+  return withRetry(async () => {
     const passwordHash = await bcrypt.hash(params.password, 10);
     const user = await prisma.user.create({
       data: {
@@ -62,9 +86,7 @@ export async function createTestUser(params: {
       select: { id: true, username: true, displayName: true },
     });
     return user;
-  } finally {
-    await prisma.$disconnect();
-  }
+  });
 }
 
 /**
@@ -79,7 +101,7 @@ export async function createTestRequest(params: {
 }): Promise<TestRequest> {
   const prisma = await createTestPrismaClient();
 
-  try {
+  return withRetry(async () => {
     const status = params.status ?? 'PENDING';
     const isProcessed = ['APPROVED', 'REJECTED', 'EXPIRED'].includes(status);
     const request = await prisma.request.create({
@@ -97,9 +119,7 @@ export async function createTestRequest(params: {
       status: request.status as TestRequest['status'],
       timeoutSeconds: request.timeoutSeconds ?? null,
     };
-  } finally {
-    await prisma.$disconnect();
-  }
+  });
 }
 
 /**
@@ -108,7 +128,7 @@ export async function createTestRequest(params: {
 export async function findRequestByExternalId(externalId: string): Promise<TestRequest | null> {
   const prisma = await createTestPrismaClient();
 
-  try {
+  return withRetry(async () => {
     const request = await prisma.request.findUnique({ where: { externalId } });
     if (!request) return null;
     return {
@@ -116,9 +136,7 @@ export async function findRequestByExternalId(externalId: string): Promise<TestR
       status: request.status as TestRequest['status'],
       timeoutSeconds: request.timeoutSeconds ?? null,
     };
-  } finally {
-    await prisma.$disconnect();
-  }
+  });
 }
 
 /**
@@ -127,13 +145,11 @@ export async function findRequestByExternalId(externalId: string): Promise<TestR
 export async function cleanupTestData(externalIds: string[]): Promise<void> {
   const prisma = await createTestPrismaClient();
 
-  try {
+  await withRetry(async () => {
     await prisma.request.deleteMany({
       where: { externalId: { in: externalIds } },
     });
-  } finally {
-    await prisma.$disconnect();
-  }
+  });
 }
 
 /**
@@ -142,11 +158,9 @@ export async function cleanupTestData(externalIds: string[]): Promise<void> {
 export async function deleteTestUser(username: string): Promise<void> {
   const prisma = await createTestPrismaClient();
 
-  try {
+  await withRetry(async () => {
     await prisma.user.deleteMany({ where: { username } });
-  } finally {
-    await prisma.$disconnect();
-  }
+  });
 }
 
 /**
@@ -159,7 +173,7 @@ export async function updateAllPendingRequestsStatus(
 ): Promise<string[]> {
   const prisma = await createTestPrismaClient();
 
-  try {
+  return withRetry(async () => {
     const pendingRequests = await prisma.request.findMany({
       where: { status: 'PENDING' },
       select: { id: true },
@@ -175,9 +189,7 @@ export async function updateAllPendingRequestsStatus(
     }
 
     return ids;
-  } finally {
-    await prisma.$disconnect();
-  }
+  });
 }
 
 /**
@@ -187,14 +199,12 @@ export async function restoreRequestsToPending(ids: string[]): Promise<void> {
   if (ids.length === 0) return;
   const prisma = await createTestPrismaClient();
 
-  try {
+  await withRetry(async () => {
     await prisma.request.updateMany({
       where: { id: { in: ids } },
       data: { status: 'PENDING' },
     });
-  } finally {
-    await prisma.$disconnect();
-  }
+  });
 }
 
 interface SavedProcessedRequest {
@@ -211,7 +221,7 @@ interface SavedProcessedRequest {
 export async function hideAllProcessedRequests(): Promise<SavedProcessedRequest[]> {
   const prisma = await createTestPrismaClient();
 
-  try {
+  return withRetry(async () => {
     const processed = await prisma.request.findMany({
       where: { status: { in: ['APPROVED', 'REJECTED', 'EXPIRED'] } },
       select: { id: true, status: true, processedAt: true },
@@ -225,9 +235,7 @@ export async function hideAllProcessedRequests(): Promise<SavedProcessedRequest[
     }
 
     return processed as SavedProcessedRequest[];
-  } finally {
-    await prisma.$disconnect();
-  }
+  });
 }
 
 /**
@@ -237,7 +245,7 @@ export async function restoreProcessedRequests(saved: SavedProcessedRequest[]): 
   if (saved.length === 0) return;
   const prisma = await createTestPrismaClient();
 
-  try {
+  await withRetry(async () => {
     for (const req of saved) {
       await prisma.request.update({
         where: { id: req.id },
@@ -247,9 +255,7 @@ export async function restoreProcessedRequests(saved: SavedProcessedRequest[]): 
         },
       });
     }
-  } finally {
-    await prisma.$disconnect();
-  }
+  });
 }
 
 export { testDBUrl, testDBPath };

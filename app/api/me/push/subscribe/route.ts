@@ -39,21 +39,14 @@ export async function POST(request: NextRequest): Promise<Response> {
     });
   }
 
-  // 중복 endpoint 확인
-  const existing = await prisma.pushSubscription.findUnique({
+  const subscription = await prisma.pushSubscription.upsert({
     where: { endpoint },
-  });
-
-  if (existing) {
-    return new Response(JSON.stringify(existing), {
-      status: 200,
-      headers: { 'Content-Type': 'application/json' },
-    });
-  }
-
-  // 새 구독 등록
-  const subscription = await prisma.pushSubscription.create({
-    data: {
+    update: {
+      userId: payload.userId,
+      p256dh,
+      auth,
+    },
+    create: {
       userId: payload.userId,
       endpoint,
       p256dh,
@@ -62,7 +55,7 @@ export async function POST(request: NextRequest): Promise<Response> {
   });
 
   return new Response(JSON.stringify(subscription), {
-    status: 201,
+    status: 200,
     headers: { 'Content-Type': 'application/json' },
   });
 }

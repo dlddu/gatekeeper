@@ -3,7 +3,7 @@
  *
  * app/api/me/push/subscribe/route.ts의 POST 핸들러 동작을 검증합니다.
  * JWT Bearer 인증이 필요한 엔드포인트입니다.
- * 사용자의 Push 구독 정보를 DB에 등록합니다.
+ * 사용자의 Push 구독 정보를 DB에 upsert합니다.
  * 실제 DB 연결 없이 prisma와 verifyToken을 mock 처리합니다.
  */
 
@@ -13,8 +13,7 @@
 jest.mock('@/lib/prisma', () => ({
   prisma: {
     pushSubscription: {
-      create: jest.fn(),
-      findUnique: jest.fn(),
+      upsert: jest.fn(),
     },
   },
 }));
@@ -33,8 +32,7 @@ import { prisma } from '@/lib/prisma';
 import { verifyToken } from '@/lib/auth';
 
 // 타입 캐스팅 헬퍼
-const mockPushSubscriptionCreate = prisma.pushSubscription.create as jest.Mock;
-const mockPushSubscriptionFindUnique = prisma.pushSubscription.findUnique as jest.Mock;
+const mockPushSubscriptionUpsert = prisma.pushSubscription.upsert as jest.Mock;
 const mockVerifyToken = verifyToken as jest.Mock;
 
 // --- 테스트 헬퍼 ---
@@ -149,7 +147,7 @@ describe('POST /api/me/push/subscribe', () => {
       expect(typeof body.error).toBe('string');
     });
 
-    it('JWT 인증 실패 시 pushSubscription.create를 호출하지 않아야 한다', async () => {
+    it('JWT 인증 실패 시 pushSubscription.upsert를 호출하지 않아야 한다', async () => {
       // Arrange
       const request = makeRequest(validBody);
 
@@ -157,7 +155,7 @@ describe('POST /api/me/push/subscribe', () => {
       await POST(request);
 
       // Assert
-      expect(mockPushSubscriptionCreate).not.toHaveBeenCalled();
+      expect(mockPushSubscriptionUpsert).not.toHaveBeenCalled();
     });
   });
 
@@ -295,7 +293,7 @@ describe('POST /api/me/push/subscribe', () => {
       expect(body).toHaveProperty('error');
     });
 
-    it('필드 누락 시 pushSubscription.create를 호출하지 않아야 한다', async () => {
+    it('필드 누락 시 pushSubscription.upsert를 호출하지 않아야 한다', async () => {
       // Arrange
       mockVerifyToken.mockResolvedValue(verifiedPayload);
       const request = makeRequest({}, `Bearer ${fakeToken}`);
@@ -304,19 +302,19 @@ describe('POST /api/me/push/subscribe', () => {
       await POST(request);
 
       // Assert
-      expect(mockPushSubscriptionCreate).not.toHaveBeenCalled();
+      expect(mockPushSubscriptionUpsert).not.toHaveBeenCalled();
     });
   });
 
   // ----------------------------------------------------------------
-  // 중복 endpoint → 200 (기존 구독 반환)
+  // 구독 upsert (200 OK)
   // ----------------------------------------------------------------
-  describe('중복 endpoint (200 OK - 기존 구독 반환)', () => {
-    it('이미 존재하는 endpoint로 구독 시도 시 200을 반환해야 한다', async () => {
+  describe('구독 upsert (200 OK)', () => {
+    it('유효한 데이터로 구독 시 200을 반환해야 한다', async () => {
       // Arrange
       mockVerifyToken.mockResolvedValue(verifiedPayload);
-      const existingSubscription = makeMockSubscription();
-      mockPushSubscriptionFindUnique.mockResolvedValue(existingSubscription);
+      const mockRecord = makeMockSubscription();
+      mockPushSubscriptionUpsert.mockResolvedValue(mockRecord);
       const request = makeRequest(validBody, `Bearer ${fakeToken}`);
 
       // Act
@@ -326,61 +324,11 @@ describe('POST /api/me/push/subscribe', () => {
       expect(response.status).toBe(200);
     });
 
-    it('중복 endpoint 시 응답 body에 기존 구독 id가 포함되어야 한다', async () => {
+    it('응답 body에 구독의 id가 포함되어야 한다', async () => {
       // Arrange
       mockVerifyToken.mockResolvedValue(verifiedPayload);
-      const existingSubscription = makeMockSubscription({ id: 'existing-sub-id' });
-      mockPushSubscriptionFindUnique.mockResolvedValue(existingSubscription);
-      const request = makeRequest(validBody, `Bearer ${fakeToken}`);
-
-      // Act
-      const response = await POST(request);
-      const body = await response.json();
-
-      // Assert
-      expect(body).toHaveProperty('id');
-      expect(body.id).toBe('existing-sub-id');
-    });
-
-    it('중복 endpoint 시 pushSubscription.create를 호출하지 않아야 한다', async () => {
-      // Arrange
-      mockVerifyToken.mockResolvedValue(verifiedPayload);
-      mockPushSubscriptionFindUnique.mockResolvedValue(makeMockSubscription());
-      const request = makeRequest(validBody, `Bearer ${fakeToken}`);
-
-      // Act
-      await POST(request);
-
-      // Assert
-      expect(mockPushSubscriptionCreate).not.toHaveBeenCalled();
-    });
-  });
-
-  // ----------------------------------------------------------------
-  // 정상 구독 등록 (happy path) → 201
-  // ----------------------------------------------------------------
-  describe('정상 구독 등록 (201 Created)', () => {
-    it('유효한 데이터로 구독 시 201을 반환해야 한다', async () => {
-      // Arrange
-      mockVerifyToken.mockResolvedValue(verifiedPayload);
-      mockPushSubscriptionFindUnique.mockResolvedValue(null);
-      const mockRecord = makeMockSubscription();
-      mockPushSubscriptionCreate.mockResolvedValue(mockRecord);
-      const request = makeRequest(validBody, `Bearer ${fakeToken}`);
-
-      // Act
-      const response = await POST(request);
-
-      // Assert
-      expect(response.status).toBe(201);
-    });
-
-    it('201 응답 body에 생성된 구독의 id가 포함되어야 한다', async () => {
-      // Arrange
-      mockVerifyToken.mockResolvedValue(verifiedPayload);
-      mockPushSubscriptionFindUnique.mockResolvedValue(null);
       const mockRecord = makeMockSubscription({ id: 'new-sub-id' });
-      mockPushSubscriptionCreate.mockResolvedValue(mockRecord);
+      mockPushSubscriptionUpsert.mockResolvedValue(mockRecord);
       const request = makeRequest(validBody, `Bearer ${fakeToken}`);
 
       // Act
@@ -395,11 +343,10 @@ describe('POST /api/me/push/subscribe', () => {
     it('응답 body에 endpoint가 포함되어야 한다', async () => {
       // Arrange
       mockVerifyToken.mockResolvedValue(verifiedPayload);
-      mockPushSubscriptionFindUnique.mockResolvedValue(null);
       const mockRecord = makeMockSubscription({
         endpoint: 'https://fcm.googleapis.com/fcm/send/example-endpoint',
       });
-      mockPushSubscriptionCreate.mockResolvedValue(mockRecord);
+      mockPushSubscriptionUpsert.mockResolvedValue(mockRecord);
       const request = makeRequest(validBody, `Bearer ${fakeToken}`);
 
       // Act
@@ -411,41 +358,59 @@ describe('POST /api/me/push/subscribe', () => {
       expect(body.endpoint).toBe('https://fcm.googleapis.com/fcm/send/example-endpoint');
     });
 
-    it('인증된 사용자의 userId로 pushSubscription.create를 호출해야 한다', async () => {
+    it('pushSubscription.upsert를 올바른 where 조건으로 호출해야 한다', async () => {
       // Arrange
       mockVerifyToken.mockResolvedValue(verifiedPayload);
-      mockPushSubscriptionFindUnique.mockResolvedValue(null);
-      mockPushSubscriptionCreate.mockResolvedValue(makeMockSubscription());
+      mockPushSubscriptionUpsert.mockResolvedValue(makeMockSubscription());
       const request = makeRequest(validBody, `Bearer ${fakeToken}`);
 
       // Act
       await POST(request);
 
       // Assert
-      expect(mockPushSubscriptionCreate).toHaveBeenCalledWith(
+      expect(mockPushSubscriptionUpsert).toHaveBeenCalledWith(
         expect.objectContaining({
-          data: expect.objectContaining({
+          where: { endpoint: validBody.endpoint },
+        })
+      );
+    });
+
+    it('pushSubscription.upsert의 create에 userId, endpoint, p256dh, auth가 포함되어야 한다', async () => {
+      // Arrange
+      mockVerifyToken.mockResolvedValue(verifiedPayload);
+      mockPushSubscriptionUpsert.mockResolvedValue(makeMockSubscription());
+      const request = makeRequest(validBody, `Bearer ${fakeToken}`);
+
+      // Act
+      await POST(request);
+
+      // Assert
+      expect(mockPushSubscriptionUpsert).toHaveBeenCalledWith(
+        expect.objectContaining({
+          create: expect.objectContaining({
             userId: verifiedPayload.userId,
+            endpoint: validBody.endpoint,
+            p256dh: validBody.keys.p256dh,
+            auth: validBody.keys.auth,
           }),
         })
       );
     });
 
-    it('endpoint, p256dh, auth를 포함하여 pushSubscription.create를 호출해야 한다', async () => {
+    it('pushSubscription.upsert의 update에 userId, p256dh, auth가 포함되어야 한다', async () => {
       // Arrange
       mockVerifyToken.mockResolvedValue(verifiedPayload);
-      mockPushSubscriptionFindUnique.mockResolvedValue(null);
-      mockPushSubscriptionCreate.mockResolvedValue(makeMockSubscription());
+      mockPushSubscriptionUpsert.mockResolvedValue(makeMockSubscription());
       const request = makeRequest(validBody, `Bearer ${fakeToken}`);
 
       // Act
       await POST(request);
 
       // Assert
-      expect(mockPushSubscriptionCreate).toHaveBeenCalledWith(
+      expect(mockPushSubscriptionUpsert).toHaveBeenCalledWith(
         expect.objectContaining({
-          data: expect.objectContaining({
-            endpoint: validBody.endpoint,
+          update: expect.objectContaining({
+            userId: verifiedPayload.userId,
             p256dh: validBody.keys.p256dh,
             auth: validBody.keys.auth,
           }),
@@ -456,8 +421,7 @@ describe('POST /api/me/push/subscribe', () => {
     it('verifyToken을 Authorization 헤더의 토큰으로 호출해야 한다', async () => {
       // Arrange
       mockVerifyToken.mockResolvedValue(verifiedPayload);
-      mockPushSubscriptionFindUnique.mockResolvedValue(null);
-      mockPushSubscriptionCreate.mockResolvedValue(makeMockSubscription());
+      mockPushSubscriptionUpsert.mockResolvedValue(makeMockSubscription());
       const request = makeRequest(validBody, `Bearer ${fakeToken}`);
 
       // Act

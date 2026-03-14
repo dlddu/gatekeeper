@@ -129,13 +129,12 @@ test.describe('요청(Request) CRUD', () => {
     expect(response.status()).toBe(200);
 
     const body = await response.json();
-    expect(body).toHaveProperty('requests');
-    expect(Array.isArray(body.requests)).toBe(true);
+    expect(Array.isArray(body)).toBe(true);
   });
 
   test('GET /api/requests/:id 로 개별 요청을 조회할 수 있다', async ({ request }) => {
     const response = await request.get(`/api/requests/${createdRequestId}`, {
-      headers: { Authorization: `Bearer ${authToken}` },
+      headers: { 'x-api-key': API_SECRET_KEY },
     });
     expect(response.status()).toBe(200);
 
@@ -144,8 +143,8 @@ test.describe('요청(Request) CRUD', () => {
     expect(body).toHaveProperty('status', 'PENDING');
   });
 
-  test('POST /api/requests/:id/approve 로 요청을 승인할 수 있다', async ({ request }) => {
-    const response = await request.post(`/api/requests/${createdRequestId}/approve`, {
+  test('PATCH /api/requests/:id/approve 로 요청을 승인할 수 있다', async ({ request }) => {
+    const response = await request.patch(`/api/requests/${createdRequestId}/approve`, {
       headers: { Authorization: `Bearer ${authToken}` },
     });
     expect(response.status()).toBe(200);
@@ -155,11 +154,11 @@ test.describe('요청(Request) CRUD', () => {
   });
 
   test('승인된 요청을 다시 처리할 수 없다', async ({ request }) => {
-    const response = await request.post(`/api/requests/${createdRequestId}/reject`, {
+    const response = await request.patch(`/api/requests/${createdRequestId}/reject`, {
       headers: { Authorization: `Bearer ${authToken}` },
     });
-    // 이미 처리된 요청은 에러 반환
-    expect(response.status()).not.toBe(200);
+    // 이미 처리된 요청은 에러 반환 (409 Conflict)
+    expect(response.status()).toBe(409);
   });
 });
 
@@ -199,8 +198,8 @@ test.describe('요청 거절 플로우', () => {
     requestId = reqBody.id;
   });
 
-  test('POST /api/requests/:id/reject 로 요청을 거절할 수 있다', async ({ request }) => {
-    const response = await request.post(`/api/requests/${requestId}/reject`, {
+  test('PATCH /api/requests/:id/reject 로 요청을 거절할 수 있다', async ({ request }) => {
+    const response = await request.patch(`/api/requests/${requestId}/reject`, {
       headers: { Authorization: `Bearer ${authToken}` },
     });
     expect(response.status()).toBe(200);

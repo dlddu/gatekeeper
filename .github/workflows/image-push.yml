@@ -33,8 +33,7 @@ jobs:
         with:
           images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
           tags: |
-            type=ref,event=branch
-            type=ref,event=pr
+            type=raw,value=latest
             type=sha
 
       - name: Build and push image

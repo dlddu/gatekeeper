@@ -27,6 +27,10 @@ jobs:
       - name: Load image into Kind
         run: kind load docker-image gatekeeper:e2e --name gatekeeper-e2e
 
+      # 이미지가 Kind에 정상 로드되었는지 확인
+      - name: Verify image loaded in Kind
+        run: docker exec gatekeeper-e2e-control-plane crictl images | grep gatekeeper || echo "WARNING: image not found in Kind node"
+
       # Kubernetes Secret 생성 (테스트용)
       - name: Create Kubernetes secrets
         run: |
@@ -54,9 +58,39 @@ jobs:
               {"op":"add","path":"/spec/template/spec/containers/0/env/-","value":{"name":"API_SECRET_KEY","valueFrom":{"secretKeyRef":{"name":"gatekeeper-secrets","key":"API_SECRET_KEY"}}}}
             ]'
 
-      # Pod가 Ready 상태가 될 때까지 대기
+      # 배포 전 상태 확인
+      - name: Debug pre-rollout state
+        run: |
+          echo "=== PVC Status ==="
+          kubectl get pvc
+          echo ""
+          echo "=== Deployment Status ==="
+          kubectl get deployment gatekeeper -o wide
+          echo ""
+          echo "=== Pods ==="
+          kubectl get pods -l app=gatekeeper -o wide
+
+      # Pod가 Ready 상태가 될 때까지 대기 (디버그 로그 포함)
       - name: Wait for deployment rollout
-        run: kubectl rollout status deployment/gatekeeper --timeout=180s
+        run: |
+          for i in $(seq 1 36); do
+            STATUS=$(kubectl rollout status deployment/gatekeeper --timeout=5s 2>&1) && {
+              echo "Rollout complete: $STATUS"
+              exit 0
+            }
+            echo "--- Attempt $i/36 ---"
+            kubectl get pods -l app=gatekeeper -o wide
+            # Init/App 컨테이너 상태 출력
+            kubectl get pods -l app=gatekeeper -o jsonpath='{range .items[*]}{.metadata.name}{" init: "}{range .status.initContainerStatuses[*]}{.name}{"="}{.state}{" "}{end}{" containers: "}{range .status.containerStatuses[*]}{.name}{"="}{.state}{" "}{end}{"\n"}{end}' 2>/dev/null || true
+            # 에러 상태인 경우 로그 조기 출력
+            echo "-- init container logs --"
+            kubectl logs -l app=gatekeeper -c prisma-db-push --tail=20 --ignore-errors 2>/dev/null || true
+            echo "-- app container logs --"
+            kubectl logs -l app=gatekeeper -c gatekeeper --tail=20 --ignore-errors 2>/dev/null || true
+            sleep 5
+          done
+          echo "Rollout timed out after 180s"
+          exit 1
 
       # 앱 헬스 체크 로그 확인
       - name: Verify app health
@@ -123,23 +157,35 @@ jobs:
           API_SECRET_KEY: 'e2e-test-api-key-valid'
 
       # 디버깅용 로그 수집 (실패 시)
-      - name: Collect pod logs
+      - name: Collect debug info
         if: failure()
         run: |
+          echo "=== PVC Status ==="
+          kubectl get pvc -o wide
+          echo ""
           echo "=== Pod Status ==="
           kubectl get pods -l app=gatekeeper -o wide
           echo ""
           echo "=== Pod Describe ==="
           kubectl describe pods -l app=gatekeeper
           echo ""
-          echo "=== Init Container Logs ==="
-          kubectl logs -l app=gatekeeper -c prisma-db-push --ignore-errors
+          echo "=== Init Container Logs (full) ==="
+          kubectl logs -l app=gatekeeper -c prisma-db-push --ignore-errors 2>&1 || true
           echo ""
-          echo "=== App Container Logs ==="
-          kubectl logs -l app=gatekeeper -c gatekeeper --ignore-errors
+          echo "=== App Container Logs (full) ==="
+          kubectl logs -l app=gatekeeper -c gatekeeper --ignore-errors 2>&1 || true
+          echo ""
+          echo "=== Previous App Container Logs ==="
+          kubectl logs -l app=gatekeeper -c gatekeeper --previous --ignore-errors 2>&1 || true
           echo ""
           echo "=== Events ==="
           kubectl get events --sort-by='.lastTimestamp'
+          echo ""
+          echo "=== Node Conditions ==="
+          kubectl describe node | grep -A5 "Conditions:"
+          echo ""
+          echo "=== Deployment YAML (patched) ==="
+          kubectl get deployment gatekeeper -o yaml
 
       - name: Upload Playwright report
         if: always()

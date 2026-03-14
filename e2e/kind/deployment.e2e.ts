@@ -20,9 +20,17 @@ function uniqueId(prefix: string): string {
   return `${prefix}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
 }
 
+// 디버깅용: API 응답 상세 로그 출력
+async function debugResponse(label: string, response: { status: () => number; text: () => Promise<string>; url: () => string }) {
+  const status = response.status();
+  const body = await response.text();
+  console.log(`[DEBUG] ${label} | URL: ${response.url()} | Status: ${status} | Body: ${body.slice(0, 500)}`);
+}
+
 test.describe('헬스 체크', () => {
   test('GET /api/health 가 정상 응답을 반환한다', async ({ request }) => {
     const response = await request.get('/api/health');
+    await debugResponse('health', response);
     expect(response.status()).toBe(200);
 
     const body = await response.json();
@@ -43,6 +51,7 @@ test.describe('회원가입 및 인증', () => {
         displayName: 'Kind E2E Test User',
       },
     });
+    await debugResponse('signup', response);
     expect(response.status()).toBe(201);
 
     const body = await response.json();
@@ -87,19 +96,22 @@ test.describe('요청(Request) CRUD', () => {
 
   test.beforeAll(async ({ request }) => {
     // 테스트용 사용자 생성 및 로그인
-    await request.post('/api/auth/signup', {
+    const signupRes = await request.post('/api/auth/signup', {
       data: {
         username: testUsername,
         password: testPassword,
         displayName: 'Kind CRUD Test User',
       },
     });
+    await debugResponse('crud-signup', signupRes);
 
     const loginRes = await request.post('/api/auth/login', {
       data: { username: testUsername, password: testPassword },
     });
+    await debugResponse('crud-login', loginRes);
     const loginBody = await loginRes.json();
     authToken = loginBody.token;
+    console.log(`[DEBUG] CRUD authToken obtained: ${!!authToken}`);
   });
 
   test('POST /api/requests 로 새 요청을 생성할 수 있다', async ({ request }) => {
@@ -113,6 +125,7 @@ test.describe('요청(Request) CRUD', () => {
         requesterName: 'Kind E2E Requester',
       },
     });
+    await debugResponse('create-request', response);
     expect(response.status()).toBe(201);
 
     const body = await response.json();
@@ -126,6 +139,7 @@ test.describe('요청(Request) CRUD', () => {
     const response = await request.get('/api/requests', {
       headers: { Authorization: `Bearer ${authToken}` },
     });
+    await debugResponse('list-requests', response);
     expect(response.status()).toBe(200);
 
     const body = await response.json();
@@ -133,9 +147,11 @@ test.describe('요청(Request) CRUD', () => {
   });
 
   test('GET /api/requests/:id 로 개별 요청을 조회할 수 있다', async ({ request }) => {
+    console.log(`[DEBUG] createdRequestId = ${createdRequestId}`);
     const response = await request.get(`/api/requests/${createdRequestId}`, {
       headers: { 'x-api-key': API_SECRET_KEY },
     });
+    await debugResponse('get-request-by-id', response);
     expect(response.status()).toBe(200);
 
     const body = await response.json();
@@ -147,6 +163,7 @@ test.describe('요청(Request) CRUD', () => {
     const response = await request.patch(`/api/requests/${createdRequestId}/approve`, {
       headers: { Authorization: `Bearer ${authToken}` },
     });
+    await debugResponse('approve-request', response);
     expect(response.status()).toBe(200);
 
     const body = await response.json();
@@ -157,6 +174,7 @@ test.describe('요청(Request) CRUD', () => {
     const response = await request.patch(`/api/requests/${createdRequestId}/reject`, {
       headers: { Authorization: `Bearer ${authToken}` },
     });
+    await debugResponse('reject-already-processed', response);
     // 이미 처리된 요청은 에러 반환 (409 Conflict)
     expect(response.status()).toBe(409);
   });
@@ -171,19 +189,22 @@ test.describe('요청 거절 플로우', () => {
 
   test.beforeAll(async ({ request }) => {
     // 사용자 생성 및 로그인
-    await request.post('/api/auth/signup', {
+    const signupRes = await request.post('/api/auth/signup', {
       data: {
         username: testUsername,
         password: testPassword,
         displayName: 'Kind Reject Test User',
       },
     });
+    await debugResponse('reject-signup', signupRes);
 
     const loginRes = await request.post('/api/auth/login', {
       data: { username: testUsername, password: testPassword },
     });
+    await debugResponse('reject-login', loginRes);
     const loginBody = await loginRes.json();
     authToken = loginBody.token;
+    console.log(`[DEBUG] Reject authToken obtained: ${!!authToken}`);
 
     // 테스트용 요청 생성
     const reqRes = await request.post('/api/requests', {
@@ -194,14 +215,17 @@ test.describe('요청 거절 플로우', () => {
         requesterName: 'Kind Reject Requester',
       },
     });
+    await debugResponse('reject-create-request', reqRes);
     const reqBody = await reqRes.json();
     requestId = reqBody.id;
+    console.log(`[DEBUG] Reject requestId: ${requestId}`);
   });
 
   test('PATCH /api/requests/:id/reject 로 요청을 거절할 수 있다', async ({ request }) => {
     const response = await request.patch(`/api/requests/${requestId}/reject`, {
       headers: { Authorization: `Bearer ${authToken}` },
     });
+    await debugResponse('reject-request', response);
     expect(response.status()).toBe(200);
 
     const body = await response.json();

@@ -54,9 +54,12 @@ async function seedDatabase(databaseUrl: string): Promise<void> {
   // 동적 import로 Prisma 클라이언트 생성 (테스트 DB URL 사용)
   const { PrismaClient } = await import('@prisma/client');
   const { PrismaLibSql } = await import('@prisma/adapter-libsql');
+  const { createClient } = await import('@libsql/client');
   const bcrypt = await import('bcryptjs');
 
-  const adapter = new PrismaLibSql({ url: databaseUrl });
+  const client = createClient({ url: databaseUrl });
+  await client.executeMultiple('PRAGMA busy_timeout = 5000; PRAGMA journal_mode = WAL;');
+  const adapter = new PrismaLibSql(client);
   const prisma = new PrismaClient({ adapter });
 
   try {

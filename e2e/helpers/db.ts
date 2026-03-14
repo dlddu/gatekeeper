@@ -57,8 +57,11 @@ export async function createTestPrismaClient() {
   if (!sharedPrisma) {
     const { PrismaClient } = await import('@prisma/client');
     const { PrismaLibSql } = await import('@prisma/adapter-libsql');
+    const { createClient } = await import('@libsql/client');
 
-    const adapter = new PrismaLibSql({ url: testDBUrl });
+    const client = createClient({ url: testDBUrl });
+    await client.executeMultiple('PRAGMA busy_timeout = 5000; PRAGMA journal_mode = WAL;');
+    const adapter = new PrismaLibSql(client);
     sharedPrisma = new PrismaClient({ adapter });
   }
   return sharedPrisma;

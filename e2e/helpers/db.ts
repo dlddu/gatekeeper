@@ -33,10 +33,19 @@ export interface TestRequest {
  * 사용 후 반드시 disconnect() 호출 필요
  */
 export async function createTestPrismaClient() {
+  const { createClient } = await import('@libsql/client');
   const { PrismaClient } = await import('@prisma/client');
   const { PrismaLibSql } = await import('@prisma/adapter-libsql');
 
-  const adapter = new PrismaLibSql({ url: testDBUrl });
+  class PrismaLibSqlWithBusyTimeout extends PrismaLibSql {
+    createClient(config: import('@libsql/client').Config) {
+      const client = createClient(config);
+      client.execute('PRAGMA busy_timeout = 5000').catch(console.error);
+      return client;
+    }
+  }
+
+  const adapter = new PrismaLibSqlWithBusyTimeout({ url: testDBUrl });
   return new PrismaClient({ adapter });
 }
 
@@ -192,6 +201,61 @@ export async function restoreRequestsToPending(ids: string[]): Promise<void> {
       where: { id: { in: ids } },
       data: { status: 'PENDING' },
     });
+  } finally {
+    await prisma.$disconnect();
+  }
+}
+
+interface SavedProcessedRequest {
+  id: string;
+  status: string;
+  processedAt: Date | null;
+}
+
+/**
+ * 모든 처리된 요청(APPROVED/REJECTED/EXPIRED)을 임시로 PENDING으로 변경
+ * 빈 상태 UI 테스트에서 처리 이력이 없는 상태를 만들 때 사용
+ * 반환값: 원래 상태 복원에 필요한 데이터
+ */
+export async function hideAllProcessedRequests(): Promise<SavedProcessedRequest[]> {
+  const prisma = await createTestPrismaClient();
+
+  try {
+    const processed = await prisma.request.findMany({
+      where: { status: { in: ['APPROVED', 'REJECTED', 'EXPIRED'] } },
+      select: { id: true, status: true, processedAt: true },
+    });
+
+    if (processed.length > 0) {
+      await prisma.request.updateMany({
+        where: { id: { in: processed.map((r) => r.id) } },
+        data: { status: 'PENDING', processedAt: null },
+      });
+    }
+
+    return processed as SavedProcessedRequest[];
+  } finally {
+    await prisma.$disconnect();
+  }
+}
+
+/**
+ * hideAllProcessedRequests()로 숨긴 요청들을 원래 상태로 복원
+ */
+export async function restoreProcessedRequests(saved: SavedProcessedRequest[]): Promise<void> {
+  if (saved.length === 0) return;
+  const prisma = await createTestPrismaClient();
+
+  try {
+    for (const req of saved) {
+      await prisma.request.update({
+        where: { id: req.id },
+        data: {
+          status: req.status as 'APPROVED' | 'REJECTED' | 'EXPIRED',
+          processedAt: req.processedAt,
+        },
+      });
+    }
   } finally {
     await prisma.$disconnect();
   }

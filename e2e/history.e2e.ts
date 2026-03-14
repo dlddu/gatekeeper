@@ -1,6 +1,12 @@
 import { test, expect } from '@playwright/test';
 import { TEST_USERS } from './helpers/auth';
-import { cleanupTestData, createTestRequest, findRequestByExternalId } from './helpers/db';
+import {
+  cleanupTestData,
+  createTestRequest,
+  findRequestByExternalId,
+  hideAllProcessedRequests,
+  restoreProcessedRequests,
+} from './helpers/db';
 
 /**
  * 처리 이력 화면 E2E 테스트
@@ -165,21 +171,19 @@ test.describe('처리 이력 화면 (/history)', () => {
   // --- edge case ---
 
   test('처리 이력이 없을 때 빈 상태 UI가 표시된다 (edge case)', async ({ page }) => {
-    // Arrange: 이력 API 응답을 빈 배열로 모킹하여 빈 상태 유도
-    // NOTE: 구현 시 실제 API 엔드포인트 경로를 확인하여 route 패턴을 조정할 것
-    await page.route('**/api/me/requests/history**', (route) =>
-      route.fulfill({
-        status: 200,
-        contentType: 'application/json',
-        body: JSON.stringify({ items: [], total: 0, hasMore: false }),
-      })
-    );
+    // Arrange: DB에서 모든 처리된 요청을 임시로 PENDING으로 변경하여 빈 상태 유도
+    const saved = await hideAllProcessedRequests();
 
-    // Act: 이력 페이지로 이동
-    await page.goto('/history');
+    try {
+      // Act: 이력 페이지로 이동
+      await page.goto('/history');
 
-    // Assert: 빈 상태일 때 "처리 이력이 없습니다" 텍스트가 표시됨
-    await expect(page.getByText('처리 이력이 없습니다')).toBeVisible();
+      // Assert: 빈 상태일 때 "처리 이력이 없습니다" 텍스트가 표시됨
+      await expect(page.getByText('처리 이력이 없습니다')).toBeVisible();
+    } finally {
+      // Cleanup: 원래 상태로 복원
+      await restoreProcessedRequests(saved);
+    }
   });
 
   test('더 보기 버튼 또는 무한 스크롤로 이전 이력을 추가 로드한다 (edge case)', async ({
@@ -279,27 +283,32 @@ test.describe('처리 이력 화면 (/history)', () => {
   });
 
   // --- error case ---
+  // Service Worker의 fetch 이벤트 핸들러가 page.route() 인터셉트를 방해하므로
+  // route mock이 필요한 에러 케이스에서만 SW를 비활성화합니다.
+  test.describe('네트워크 에러', () => {
+    test.use({ serviceWorkers: 'block' });
 
-  test('이력 데이터를 불러오지 못하면 에러 메시지와 재시도 버튼이 표시된다 (error case)', async ({
-    page,
-  }) => {
-    // Arrange: 이력 API 요청을 강제로 실패시킴 (네트워크 인터셉트)
-    await page.route('**/api/me/requests/history**', (route) => route.abort('failed'));
+    test('이력 데이터를 불러오지 못하면 에러 메시지와 재시도 버튼이 표시된다 (error case)', async ({
+      page,
+    }) => {
+      // Arrange: 이력 API 요청을 강제로 실패시킴 (네트워크 인터셉트)
+      await page.route('**/api/me/requests/history**', (route) => route.abort('failed'));
 
-    // Act: 이력 페이지로 이동
-    await page.goto('/history');
+      // Act: 이력 페이지로 이동
+      await page.goto('/history');
 
-    // Assert: 에러 메시지 표시
-    await expect(page.getByText('이력을 불러올 수 없습니다')).toBeVisible();
+      // Assert: 에러 메시지 표시
+      await expect(page.getByText('이력을 불러올 수 없습니다')).toBeVisible();
 
-    // Assert: 재시도 버튼 표시
-    await expect(page.getByRole('button', { name: '재시도' })).toBeVisible();
+      // Assert: 재시도 버튼 표시
+      await expect(page.getByRole('button', { name: '재시도' })).toBeVisible();
 
-    // Act: 라우트 인터셉트 해제 후 재시도 버튼 클릭
-    await page.unroute('**/api/me/requests/history**');
-    await page.getByRole('button', { name: '재시도' }).click();
+      // Act: 라우트 인터셉트 해제 후 재시도 버튼 클릭
+      await page.unroute('**/api/me/requests/history**');
+      await page.getByRole('button', { name: '재시도' }).click();
 
-    // Assert: 정상적으로 이력 헤더가 다시 표시됨
-    await expect(page.getByRole('heading', { name: '처리 이력' })).toBeVisible();
+      // Assert: 정상적으로 이력 헤더가 다시 표시됨
+      await expect(page.getByRole('heading', { name: '처리 이력' })).toBeVisible();
+    });
   });
 });

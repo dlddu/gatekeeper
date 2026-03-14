@@ -11,10 +11,10 @@ import { test, expect } from '@playwright/test';
  * - Service Worker 등록 확인
  * - 오프라인 시 기본 셸 표시 확인
  *
- * TODO: PWA 구현 완료 후 test.describe.skip → test.describe 로 변경
+ * PWA 구현 완료 (DLD-663)
  */
 
-test.describe.skip('manifest.json 검증', () => {
+test.describe('manifest.json 검증', () => {
   test('GET /manifest.json 요청이 200을 반환한다 (happy path)', async ({ request }) => {
     const response = await request.get('/manifest.json');
 
@@ -90,7 +90,7 @@ test.describe.skip('manifest.json 검증', () => {
   });
 });
 
-test.describe.skip('Service Worker 등록 확인', () => {
+test.describe('Service Worker 등록 확인', () => {
   test('/sw.js 파일이 200을 반환한다 (happy path)', async ({ request }) => {
     const response = await request.get('/sw.js');
 
@@ -109,9 +109,17 @@ test.describe.skip('Service Worker 등록 확인', () => {
       }
 
       const registration = await navigator.serviceWorker.ready;
+      const sw = registration.active;
+      if (sw && sw.state !== 'activated') {
+        await new Promise<void>((resolve) => {
+          sw.addEventListener('statechange', () => {
+            if (sw.state === 'activated') resolve();
+          });
+        });
+      }
       return {
         supported: true,
-        state: registration.active?.state ?? null,
+        state: sw?.state ?? null,
       };
     });
 
@@ -149,7 +157,7 @@ test.describe.skip('Service Worker 등록 확인', () => {
   });
 });
 
-test.describe.skip('오프라인 시 기본 셸 표시 확인', () => {
+test.describe('오프라인 시 기본 셸 표시 확인', () => {
   test('온라인 상태에서 페이지가 정상적으로 렌더링된다 (happy path)', async ({ page }) => {
     await page.goto('/');
 
@@ -196,9 +204,7 @@ test.describe.skip('오프라인 시 기본 셸 표시 확인', () => {
 
     // Assert: 오프라인 상태 표시 요소가 존재해야 함
     // (구현 시 data-testid="offline-indicator" 또는 aria-label, 텍스트 등으로 식별)
-    const offlineIndicator = page.locator(
-      '[data-testid="offline-indicator"], [aria-label*="오프라인"], text="오프라인"'
-    );
+    const offlineIndicator = page.locator('[data-testid="offline-indicator"]');
     await expect(offlineIndicator).toBeVisible();
 
     // 테스트 후 온라인 상태 복원

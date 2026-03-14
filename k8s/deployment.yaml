@@ -29,17 +29,17 @@ spec:
               valueFrom:
                 secretKeyRef:
                   name: gatekeeper-secrets
-                  key: jwt-secret
+                  key: JWT_SECRET
             - name: VAPID_PUBLIC_KEY
               valueFrom:
                 secretKeyRef:
                   name: gatekeeper-secrets
-                  key: vapid-public-key
+                  key: VAPID_PUBLIC_KEY
             - name: VAPID_PRIVATE_KEY
               valueFrom:
                 secretKeyRef:
                   name: gatekeeper-secrets
-                  key: vapid-private-key
+                  key: VAPID_PRIVATE_KEY
           volumeMounts:
             - name: data
               mountPath: /app/data

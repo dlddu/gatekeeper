@@ -85,9 +85,9 @@ describe('Next.js 15 project structure', () => {
       expect(deps['jose']).toBeDefined();
     });
 
-    it('should have prisma as a dependency', () => {
-      const deps = pkg.dependencies as Record<string, string>;
-      expect(deps['prisma']).toBeDefined();
+    it('should have prisma as a devDependency', () => {
+      const devDeps = pkg.devDependencies as Record<string, string>;
+      expect(devDeps['prisma']).toBeDefined();
     });
 
     it('should have @prisma/client as a dependency', () => {

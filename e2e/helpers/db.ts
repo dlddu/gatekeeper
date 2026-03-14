@@ -33,13 +33,20 @@ export interface TestRequest {
  * 사용 후 반드시 disconnect() 호출 필요
  */
 export async function createTestPrismaClient() {
+  const { createClient } = await import('@libsql/client');
   const { PrismaClient } = await import('@prisma/client');
   const { PrismaLibSql } = await import('@prisma/adapter-libsql');
 
-  const adapter = new PrismaLibSql({ url: testDBUrl });
-  const client = new PrismaClient({ adapter });
-  await client.$executeRawUnsafe('PRAGMA busy_timeout = 5000');
-  return client;
+  class PrismaLibSqlWithBusyTimeout extends PrismaLibSql {
+    createClient(config: import('@libsql/client').Config) {
+      const client = createClient(config);
+      client.execute('PRAGMA busy_timeout = 5000').catch(console.error);
+      return client;
+    }
+  }
+
+  const adapter = new PrismaLibSqlWithBusyTimeout({ url: testDBUrl });
+  return new PrismaClient({ adapter });
 }
 
 /**

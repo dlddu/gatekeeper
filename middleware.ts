@@ -4,6 +4,7 @@ import { verifyToken } from '@/lib/auth';
 // 인증이 필요없는 공개 경로
 const publicPaths = [
   '/api/auth/login',
+  '/api/health',
   '/api/requests',
   '/_next',
   '/favicon.ico',

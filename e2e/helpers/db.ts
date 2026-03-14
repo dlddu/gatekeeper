@@ -37,7 +37,9 @@ export async function createTestPrismaClient() {
   const { PrismaLibSql } = await import('@prisma/adapter-libsql');
 
   const adapter = new PrismaLibSql({ url: testDBUrl });
-  return new PrismaClient({ adapter });
+  const client = new PrismaClient({ adapter });
+  await client.$executeRawUnsafe('PRAGMA busy_timeout = 5000');
+  return client;
 }
 
 /**

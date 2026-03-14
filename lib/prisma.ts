@@ -9,13 +9,17 @@ function createPrismaClient(): PrismaClient {
   const url = process.env.DATABASE_URL ?? 'file:./dev.db';
   const adapter = new PrismaLibSql({ url });
 
-  return new PrismaClient({
+  const client = new PrismaClient({
     adapter,
     log:
       process.env.NODE_ENV === 'development'
         ? ['query', 'error', 'warn']
         : ['error'],
   });
+
+  client.$executeRawUnsafe('PRAGMA busy_timeout = 5000').catch(console.error);
+
+  return client;
 }
 
 export const prisma =

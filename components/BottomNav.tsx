@@ -1,5 +1,6 @@
 'use client';
 
+import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 
 export default function BottomNav() {
@@ -27,7 +28,7 @@ export default function BottomNav() {
       {tabs.map((tab) => {
         const isActive = pathname === tab.href || (tab.href === '/requests' && pathname?.startsWith('/requests'));
         return (
-          <a
+          <Link
             key={tab.href}
             href={tab.href}
             aria-current={isActive ? 'page' : undefined}
@@ -45,7 +46,7 @@ export default function BottomNav() {
             }}
           >
             {tab.label}
-          </a>
+          </Link>
         );
       })}
     </nav>

@@ -100,9 +100,17 @@ test.describe('설정 페이지 Push 알림 토글 (/settings)', () => {
     // Arrange: Push API 모킹 + 구독 API 라우트 모킹
     await setupPushMocks(page);
 
-    // Act: 설정 페이지로 이동 (초기 상태: 구독 중 — mockBrowserPushAPIs가 getSubscription → mock 반환)
+    // Act: 설정 페이지로 이동 (초기 상태: 미구독 — stateful mock이 초기값 false로 시작)
     await page.goto('/settings');
     await expect(page.getByRole('heading', { name: '설정' })).toBeVisible();
+
+    // Arrange: 먼저 토글을 ON으로 전환하여 구독 중 상태로 만듦
+    const subscribePromise = page.waitForRequest(
+      (req) =>
+        req.url().includes('/api/me/push/subscribe') && req.method() === 'POST'
+    );
+    await page.getByRole('switch', { name: /push/i }).click();
+    await subscribePromise;
 
     // Assert: 초기 상태가 ON(구독 중)임을 명시적으로 확인
     await expect(page.getByRole('switch', { name: /push/i })).toBeChecked();
@@ -260,13 +268,21 @@ test.describe('설정 페이지 Push 토글 API 연동 (SW 차단)', () => {
   test('토글 OFF 시 DELETE /api/me/push/unsubscribe 요청이 실제로 인터셉트된다 (happy path)', async ({
     page,
   }) => {
-    // Arrange: Push API 모킹 + 라우트 인터셉트 설정 (getSubscription → mock 반환으로 초기 ON 상태)
+    // Arrange: Push API 모킹 + 라우트 인터셉트 설정 (stateful mock이 초기값 false로 시작)
     await mockBrowserPushAPIs(page);
     await mockPushSubscriptionRoutes(page);
 
     // Act: 설정 페이지로 이동
     await page.goto('/settings');
     await expect(page.getByRole('heading', { name: '설정' })).toBeVisible();
+
+    // Arrange: 먼저 토글을 ON으로 전환하여 구독 중 상태로 만듦
+    const subscribeRequest = page.waitForRequest(
+      (req) =>
+        req.url().includes('/api/me/push/subscribe') && req.method() === 'POST'
+    );
+    await page.getByRole('switch', { name: /push/i }).click();
+    await subscribeRequest;
 
     // Assert: 초기 상태가 ON(구독 중)임을 명시적으로 확인
     await expect(page.getByRole('switch', { name: /push/i })).toBeChecked();

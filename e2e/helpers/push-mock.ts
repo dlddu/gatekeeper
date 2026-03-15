@@ -132,7 +132,7 @@ export async function mockPushSubscriptionRoutes(
   const { failSubscription = false } = options;
 
   // POST /api/me/push/subscribe 인터셉트
-  await page.route('/api/me/push/subscribe', async (route) => {
+  await page.route('**/api/me/push/subscribe', async (route) => {
     if (failSubscription) {
       await route.fulfill({
         status: 500,
@@ -153,7 +153,7 @@ export async function mockPushSubscriptionRoutes(
   });
 
   // DELETE /api/me/push/unsubscribe 인터셉트
-  await page.route('/api/me/push/unsubscribe', async (route) => {
+  await page.route('**/api/me/push/unsubscribe', async (route) => {
     await route.fulfill({
       status: 200,
       contentType: 'application/json',
@@ -162,7 +162,7 @@ export async function mockPushSubscriptionRoutes(
   });
 
   // POST /api/push/send (서버→클라이언트 push 발송) 인터셉트
-  await page.route('/api/push/send', async (route) => {
+  await page.route('**/api/push/send', async (route) => {
     await route.fulfill({
       status: 200,
       contentType: 'application/json',

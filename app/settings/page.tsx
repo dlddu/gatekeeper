@@ -92,11 +92,7 @@ export default function SettingsPage() {
           return;
         }
 
-        const registration = await navigator.serviceWorker.getRegistration();
-        if (!registration) {
-          setIsLoading(false);
-          return;
-        }
+        const registration = await navigator.serviceWorker.ready;
 
         const applicationServerKey = urlBase64ToUint8Array(NEXT_PUBLIC_VAPID_PUBLIC_KEY);
         const subscription = await registration.pushManager.subscribe({
@@ -124,11 +120,7 @@ export default function SettingsPage() {
         }
       } else {
         // 구독 해제 흐름
-        const registration = await navigator.serviceWorker.getRegistration();
-        if (!registration) {
-          setIsLoading(false);
-          return;
-        }
+        const registration = await navigator.serviceWorker.ready;
 
         const subscription = await registration.pushManager.getSubscription();
         if (!subscription) {

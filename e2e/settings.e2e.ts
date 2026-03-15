@@ -104,6 +104,9 @@ test.describe.skip('설정 페이지 Push 알림 토글 (/settings)', () => {
     await page.goto('/settings');
     await expect(page.getByRole('heading', { name: '설정' })).toBeVisible();
 
+    // Assert: 초기 상태가 ON(구독 중)임을 명시적으로 확인
+    await expect(page.getByRole('switch', { name: /push/i })).toBeChecked();
+
     // Arrange: 구독 해제 API 호출 대기 준비
     const unsubscribePromise = page.waitForRequest(
       (req) =>
@@ -116,8 +119,13 @@ test.describe.skip('설정 페이지 Push 알림 토글 (/settings)', () => {
     // Assert: DELETE /api/me/push/unsubscribe 호출됨
     await unsubscribePromise;
 
-    // Assert: 기본 안내 텍스트로 복귀 ("알림이 활성화되어 있습니다" 사라짐)
+    // Assert: 활성화 안내 텍스트가 사라짐
     await expect(page.getByText('알림이 활성화되어 있습니다')).not.toBeVisible();
+
+    // Assert: 기본 안내 텍스트로 복귀
+    await expect(
+      page.getByText('Push 알림을 활성화하면 승인 요청 알림을 받을 수 있습니다')
+    ).toBeVisible();
   });
 
   // --- edge case ---
@@ -260,6 +268,9 @@ test.describe.skip('설정 페이지 Push 토글 API 연동 (SW 차단)', () => 
     await page.goto('/settings');
     await expect(page.getByRole('heading', { name: '설정' })).toBeVisible();
 
+    // Assert: 초기 상태가 ON(구독 중)임을 명시적으로 확인
+    await expect(page.getByRole('switch', { name: /push/i })).toBeChecked();
+
     // Arrange: 구독 해제 API 요청 대기
     const unsubscribeRequest = page.waitForRequest(
       (req) =>
@@ -274,7 +285,12 @@ test.describe.skip('설정 페이지 Push 토글 API 연동 (SW 차단)', () => 
     expect(req.method()).toBe('DELETE');
     expect(req.url()).toContain('/api/me/push/unsubscribe');
 
-    // Assert: 기본 안내 텍스트로 복귀
+    // Assert: 활성화 안내 텍스트가 사라짐
     await expect(page.getByText('알림이 활성화되어 있습니다')).not.toBeVisible();
+
+    // Assert: 기본 안내 텍스트로 복귀
+    await expect(
+      page.getByText('Push 알림을 활성화하면 승인 요청 알림을 받을 수 있습니다')
+    ).toBeVisible();
   });
 });

@@ -71,7 +71,8 @@ export async function mockBrowserPushAPIs(
       window.Notification = MockNotification;
 
       // stateful 구독 상태 플래그 초기화
-      (window as any).__PUSH_SUBSCRIBED__ = initiallySubscribed;
+      const win = window as unknown as Window & { __PUSH_SUBSCRIBED__: boolean };
+      win.__PUSH_SUBSCRIBED__ = initiallySubscribed;
 
       // PushSubscription 모킹
       const mockPushSubscriptionObj = {
@@ -98,7 +99,7 @@ export async function mockBrowserPushAPIs(
           keys: mockSubscription.keys,
         }),
         unsubscribe: async () => {
-          (window as any).__PUSH_SUBSCRIBED__ = false;
+          win.__PUSH_SUBSCRIBED__ = false;
           return true;
         },
       };
@@ -106,10 +107,10 @@ export async function mockBrowserPushAPIs(
       // PushManager 모킹 (stateful)
       const MockPushManager = {
         getSubscription: async () => {
-          return (window as any).__PUSH_SUBSCRIBED__ ? mockPushSubscriptionObj : null;
+          return win.__PUSH_SUBSCRIBED__ ? mockPushSubscriptionObj : null;
         },
         subscribe: async () => {
-          (window as any).__PUSH_SUBSCRIBED__ = true;
+          win.__PUSH_SUBSCRIBED__ = true;
           return mockPushSubscriptionObj;
         },
         permissionState: async () => 'granted' as PermissionState,

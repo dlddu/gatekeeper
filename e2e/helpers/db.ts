@@ -278,4 +278,63 @@ export async function cleanupPushSubscriptions(username: string): Promise<void> 
   }
 }
 
+/**
+ * 테스트용 Push 구독 레코드 직접 생성 (DB 시드)
+ * 토글 OFF 테스트에서 초기 구독 상태를 만들 때 사용
+ */
+export async function createTestPushSubscription(params: {
+  userId: string;
+  endpoint: string;
+  p256dh: string;
+  auth: string;
+}): Promise<{ id: string; endpoint: string }> {
+  const prisma = await createTestPrismaClient();
+
+  try {
+    const sub = await prisma.pushSubscription.create({
+      data: params,
+      select: { id: true, endpoint: true },
+    });
+    return sub;
+  } finally {
+    await prisma.$disconnect();
+  }
+}
+
+/**
+ * endpoint로 Push 구독 레코드 조회
+ */
+export async function findPushSubscriptionByEndpoint(
+  endpoint: string
+): Promise<{ id: string; userId: string; endpoint: string } | null> {
+  const prisma = await createTestPrismaClient();
+
+  try {
+    return await prisma.pushSubscription.findUnique({
+      where: { endpoint },
+      select: { id: true, userId: true, endpoint: true },
+    });
+  } finally {
+    await prisma.$disconnect();
+  }
+}
+
+/**
+ * username으로 사용자 ID 조회
+ */
+export async function findUserByUsername(
+  username: string
+): Promise<{ id: string } | null> {
+  const prisma = await createTestPrismaClient();
+
+  try {
+    return await prisma.user.findUnique({
+      where: { username },
+      select: { id: true },
+    });
+  } finally {
+    await prisma.$disconnect();
+  }
+}
+
 export { testDBUrl, testDBPath };

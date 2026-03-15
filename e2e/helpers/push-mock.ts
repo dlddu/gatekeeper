@@ -59,9 +59,6 @@ export async function mockBrowserPushAPIs(page: Page): Promise<void> {
     // @ts-expect-error - 브라우저 전역 Notification 교체
     window.Notification = MockNotification;
 
-    // 구독 상태 추적 (stateful: 초기 미구독)
-    (window as unknown as Record<string, unknown>).__PUSH_SUBSCRIBED__ = false;
-
     // PushSubscription 모킹
     const mockPushSubscriptionObj = {
       endpoint: mockSubscription.endpoint,
@@ -86,36 +83,14 @@ export async function mockBrowserPushAPIs(page: Page): Promise<void> {
         endpoint: mockSubscription.endpoint,
         keys: mockSubscription.keys,
       }),
-      unsubscribe: async () => {
-        (window as unknown as Record<string, unknown>).__PUSH_SUBSCRIBED__ = false;
-        return true;
-      },
+      unsubscribe: async () => true,
     };
 
-    // PushManager 모킹 (구독 상태 stateful 관리)
+    // PushManager 모킹
     const MockPushManager = {
-      getSubscription: async () => {
-        return (window as unknown as Record<string, unknown>).__PUSH_SUBSCRIBED__
-          ? mockPushSubscriptionObj
-          : null;
-      },
-      subscribe: async () => {
-        (window as unknown as Record<string, unknown>).__PUSH_SUBSCRIBED__ = true;
-        return mockPushSubscriptionObj;
-      },
+      getSubscription: async () => mockPushSubscriptionObj,
+      subscribe: async () => mockPushSubscriptionObj,
       permissionState: async () => 'granted' as PermissionState,
-    };
-
-    // 가짜 ServiceWorkerRegistration (SW가 없는 환경에서도 pushManager에 접근 가능하도록)
-    const fakeRegistration = {
-      active: { state: 'activated' },
-      installing: null,
-      waiting: null,
-      scope: '/',
-      pushManager: MockPushManager,
-      addEventListener: () => {},
-      removeEventListener: () => {},
-      update: async () => {},
     };
 
     // ServiceWorkerRegistration에 PushManager 주입
@@ -133,10 +108,8 @@ export async function mockBrowserPushAPIs(page: Page): Promise<void> {
               get: () => MockPushManager,
               configurable: true,
             });
-            return registration;
           }
-          // SW가 없는 환경(SW 차단 또는 미등록)에서는 가짜 registration 반환
-          return fakeRegistration as unknown as ServiceWorkerRegistration;
+          return registration;
         },
         configurable: true,
       });

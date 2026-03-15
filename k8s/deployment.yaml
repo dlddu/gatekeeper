@@ -18,7 +18,7 @@ spec:
       initContainers:
         - name: prisma-db-push
           image: ghcr.io/dlddu/gatekeeper:latest
-          command: ["node", "node_modules/prisma/build/index.js", "db", "push", "--skip-generate", "--accept-data-loss"]
+          command: ["npx", "prisma", "db", "push", "--skip-generate", "--accept-data-loss"]
           env:
             - name: DATABASE_URL
               value: "file:/app/data/gatekeeper.db"

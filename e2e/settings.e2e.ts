@@ -213,12 +213,7 @@ test.describe('설정 페이지 Push 알림 토글 (/settings)', () => {
   });
 });
 
-/**
- * Service Worker가 page.route() 인터셉트를 방해하는 경우에 대비하여
- * API 호출 검증 테스트는 별도 describe 블록에서 SW를 비활성화합니다.
- */
-test.describe('설정 페이지 Push 토글 API 연동 (SW 차단)', () => {
-  test.use({ serviceWorkers: 'block' });
+test.describe('설정 페이지 Push 토글 API 연동', () => {
 
   test.beforeEach(async ({ page }) => {
     // 관리자 로그인 (UI 기반)

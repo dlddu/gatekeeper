@@ -116,7 +116,7 @@ export async function mockBrowserPushAPIs(
         permissionState: async () => 'granted' as PermissionState,
       };
 
-      // SW 없는 환경(serviceWorkers: 'block')을 위한 fakeRegistration
+      // SW가 아직 등록되지 않은 환경을 위한 fakeRegistration
       const fakeRegistration = {
         active: { state: 'activated' },
         installing: null,

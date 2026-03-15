@@ -35,6 +35,11 @@ const OFFLINE_HTML = '<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"
 self.addEventListener('fetch', (event) => {
   const { request } = event;
 
+  // API 요청은 SW가 처리하지 않음 (브라우저 기본 동작)
+  if (request.url.includes('/api/')) {
+    return;
+  }
+
   // Navigation requests (HTML documents)
   if (request.mode === 'navigate') {
     event.respondWith(

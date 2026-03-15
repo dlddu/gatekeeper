@@ -170,8 +170,6 @@ test.describe('DELETE /api/me/push/unsubscribe (Push 구독 해제)', () => {
 });
 
 test.describe('브라우저 Push 모킹 (page.addInitScript + page.route)', () => {
-  // 서비스 워커가 fetch 이벤트를 가로채면 page.route()가 요청을 인터셉트하지 못함
-  test.use({ serviceWorkers: 'block' });
 
   test('브라우저 PushManager API가 모킹된 상태로 초기화된다 (happy path)', async ({ page }) => {
     await setupPushMocks(page);

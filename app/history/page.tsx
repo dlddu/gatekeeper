@@ -100,75 +100,6 @@ export default function HistoryPage() {
     }
   }
 
-  if (isLoading) {
-    return (
-      <div
-        className="min-h-screen flex items-center justify-center"
-        style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
-      >
-        <p className="text-gray-400" style={{ color: '#9ca3af' }}>로딩 중...</p>
-      </div>
-    );
-  }
-
-  if (error) {
-    return (
-      <div
-        className="min-h-screen flex items-center justify-center flex-col gap-4"
-        style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', flexDirection: 'column', gap: '1rem' }}
-      >
-        <p className="text-red-500" style={{ color: '#ef4444' }}>이력을 불러올 수 없습니다</p>
-        <button
-          onClick={() => {
-            setError(null);
-            setIsLoading(true);
-            const token = localStorage.getItem('token');
-            if (!token) {
-              router.push('/login');
-              return;
-            }
-            fetch('/api/me/requests/history', {
-              headers: { Authorization: `Bearer ${token}` },
-            })
-              .then(async (res) => {
-                if (res.status === 401) {
-                  localStorage.removeItem('token');
-                  router.push('/login');
-                  return;
-                }
-                if (!res.ok) {
-                  setError('이력을 불러올 수 없습니다');
-                  return;
-                }
-                const data = await res.json();
-                setItems(data.items);
-                setHasMore(data.hasMore);
-                setNextCursor(data.nextCursor);
-              })
-              .catch(() => setError('이력을 불러올 수 없습니다'))
-              .finally(() => setIsLoading(false));
-          }}
-          className="px-4 py-2 bg-gray-900 text-white rounded-lg text-sm font-medium"
-          style={{
-            paddingLeft: '1rem',
-            paddingRight: '1rem',
-            paddingTop: '0.5rem',
-            paddingBottom: '0.5rem',
-            backgroundColor: '#111827',
-            color: '#ffffff',
-            borderRadius: '0.5rem',
-            fontSize: '0.875rem',
-            fontWeight: 500,
-            border: 'none',
-            cursor: 'pointer',
-          }}
-        >
-          재시도
-        </button>
-      </div>
-    );
-  }
-
   return (
     <div
       className="min-h-screen bg-gray-50 pb-16"
@@ -202,7 +133,68 @@ export default function HistoryPage() {
         className="px-4 py-4"
         style={{ paddingLeft: '1rem', paddingRight: '1rem', paddingTop: '1rem', paddingBottom: '1rem' }}
       >
-        {items.length === 0 ? (
+        {isLoading ? (
+          <div
+            className="flex items-center justify-center py-16"
+            style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', paddingTop: '4rem', paddingBottom: '4rem' }}
+          >
+            <p className="text-gray-400" style={{ color: '#9ca3af' }}>로딩 중...</p>
+          </div>
+        ) : error ? (
+          <div
+            className="flex items-center justify-center flex-col gap-4 py-16"
+            style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', flexDirection: 'column', gap: '1rem', paddingTop: '4rem', paddingBottom: '4rem' }}
+          >
+            <p className="text-red-500" style={{ color: '#ef4444' }}>이력을 불러올 수 없습니다</p>
+            <button
+              onClick={() => {
+                setError(null);
+                setIsLoading(true);
+                const token = localStorage.getItem('token');
+                if (!token) {
+                  router.push('/login');
+                  return;
+                }
+                fetch('/api/me/requests/history', {
+                  headers: { Authorization: `Bearer ${token}` },
+                })
+                  .then(async (res) => {
+                    if (res.status === 401) {
+                      localStorage.removeItem('token');
+                      router.push('/login');
+                      return;
+                    }
+                    if (!res.ok) {
+                      setError('이력을 불러올 수 없습니다');
+                      return;
+                    }
+                    const data = await res.json();
+                    setItems(data.items);
+                    setHasMore(data.hasMore);
+                    setNextCursor(data.nextCursor);
+                  })
+                  .catch(() => setError('이력을 불러올 수 없습니다'))
+                  .finally(() => setIsLoading(false));
+              }}
+              className="px-4 py-2 bg-gray-900 text-white rounded-lg text-sm font-medium"
+              style={{
+                paddingLeft: '1rem',
+                paddingRight: '1rem',
+                paddingTop: '0.5rem',
+                paddingBottom: '0.5rem',
+                backgroundColor: '#111827',
+                color: '#ffffff',
+                borderRadius: '0.5rem',
+                fontSize: '0.875rem',
+                fontWeight: 500,
+                border: 'none',
+                cursor: 'pointer',
+              }}
+            >
+              재시도
+            </button>
+          </div>
+        ) : items.length === 0 ? (
           <div
             className="flex flex-col items-center justify-center py-16 text-gray-400"
             style={{

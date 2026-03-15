@@ -61,28 +61,6 @@ export default function RequestsPage() {
     fetchPendingRequests();
   }, [router]);
 
-  if (isLoading) {
-    return (
-      <div
-        className="min-h-screen flex items-center justify-center"
-        style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
-      >
-        <p className="text-gray-400" style={{ color: '#9ca3af' }}>로딩 중...</p>
-      </div>
-    );
-  }
-
-  if (error) {
-    return (
-      <div
-        className="min-h-screen flex items-center justify-center"
-        style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
-      >
-        <p className="text-red-500" style={{ color: '#ef4444' }}>{error}</p>
-      </div>
-    );
-  }
-
   return (
     <div
       className="min-h-screen bg-gray-50 pb-16"
@@ -110,7 +88,23 @@ export default function RequestsPage() {
         className="px-4 py-4"
         style={{ paddingLeft: '1rem', paddingRight: '1rem', paddingTop: '1rem', paddingBottom: '1rem' }}
       >
-        <RequestCardList requests={requests} />
+        {isLoading ? (
+          <div
+            className="flex items-center justify-center py-16"
+            style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', paddingTop: '4rem', paddingBottom: '4rem' }}
+          >
+            <p className="text-gray-400" style={{ color: '#9ca3af' }}>로딩 중...</p>
+          </div>
+        ) : error ? (
+          <div
+            className="flex items-center justify-center py-16"
+            style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', paddingTop: '4rem', paddingBottom: '4rem' }}
+          >
+            <p className="text-red-500" style={{ color: '#ef4444' }}>{error}</p>
+          </div>
+        ) : (
+          <RequestCardList requests={requests} />
+        )}
       </main>
       <BottomNav />
     </div>

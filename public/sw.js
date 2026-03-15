@@ -31,6 +31,50 @@ self.addEventListener('activate', (event) => {
 // Offline fallback HTML shell
 const OFFLINE_HTML = '<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Gatekeeper</title><style>body{font-family:system-ui,sans-serif;margin:0;padding:0;background:#f9fafb;color:#111827}h1{margin:0;padding:24px;font-size:20px}.offline-msg{padding:24px;text-align:center;color:#6b7280}</style></head><body><div data-testid="app-shell"><main><h1>Gatekeeper</h1><div class="offline-msg"><div data-testid="offline-indicator">오프라인 상태입니다. 네트워크 연결을 확인해주세요.</div></div></main></div><script>window.addEventListener("online",function(){window.location.reload()});</script></body></html>';
 
+// push event: 서버에서 보낸 push 메시지를 알림으로 표시
+self.addEventListener('push', (event) => {
+  if (!event.data) return;
+
+  try {
+    const data = event.data.json();
+    const title = data.title || 'Gatekeeper';
+    const options = {
+      body: data.body || '',
+      icon: '/icon-192x192.png',
+      badge: '/icon-192x192.png',
+      data: { url: '/' },
+    };
+
+    event.waitUntil(self.registration.showNotification(title, options));
+  } catch (e) {
+    // JSON 파싱 실패 시 텍스트로 표시
+    const text = event.data.text();
+    event.waitUntil(
+      self.registration.showNotification('Gatekeeper', { body: text })
+    );
+  }
+});
+
+// notificationclick event: 알림 클릭 시 앱 열기
+self.addEventListener('notificationclick', (event) => {
+  event.notification.close();
+
+  const url = event.notification.data?.url || '/';
+
+  event.waitUntil(
+    self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then((clientList) => {
+      // 이미 열려있는 탭이 있으면 포커스
+      for (const client of clientList) {
+        if (client.url.includes(self.location.origin) && 'focus' in client) {
+          return client.focus();
+        }
+      }
+      // 없으면 새 탭 열기
+      return self.clients.openWindow(url);
+    })
+  );
+});
+
 // fetch event: network-first for navigation, cache-first for assets
 self.addEventListener('fetch', (event) => {
   const { request } = event;

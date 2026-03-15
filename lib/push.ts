@@ -42,6 +42,12 @@ export async function sendPushNotifications(options: SendPushOptions): Promise<v
   const VAPID_PUBLIC_KEY = process.env.VAPID_PUBLIC_KEY ?? '';
   const VAPID_PRIVATE_KEY = process.env.VAPID_PRIVATE_KEY ?? '';
 
+  if (!VAPID_SUBJECT || !VAPID_PUBLIC_KEY || !VAPID_PRIVATE_KEY) {
+    throw new Error(
+      '[Push] VAPID 환경변수가 설정되지 않았습니다. VAPID_SUBJECT, VAPID_PUBLIC_KEY, VAPID_PRIVATE_KEY를 확인하세요.'
+    );
+  }
+
   webpush.setVapidDetails(VAPID_SUBJECT, VAPID_PUBLIC_KEY, VAPID_PRIVATE_KEY);
 
   const payload = JSON.stringify({ title, body });

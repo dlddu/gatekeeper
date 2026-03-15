@@ -60,6 +60,8 @@ export async function POST(request: NextRequest): Promise<Response> {
           where: { userId },
         });
 
+        console.log(`[Requests] Push 발송 시도: userId=${userId}, requestId=${created.id}, 구독수=${pushSubscriptions.length}`);
+
         if (pushSubscriptions.length > 0) {
           await sendPushNotifications({
             subscriptions: pushSubscriptions,
@@ -70,7 +72,8 @@ export async function POST(request: NextRequest): Promise<Response> {
             },
           });
         }
-      } catch {
+      } catch (error) {
+        console.error(`[Requests] Push 발송 중 오류: userId=${userId}, requestId=${created.id}, error=${error}`);
         // Push 발송 실패는 요청 생성 결과에 영향을 주지 않음
       }
     }

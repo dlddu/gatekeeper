@@ -283,10 +283,7 @@ test.describe('처리 이력 화면 (/history)', () => {
   });
 
   // --- error case ---
-  // Service Worker의 fetch 이벤트 핸들러가 page.route() 인터셉트를 방해하므로
-  // route mock이 필요한 에러 케이스에서만 SW를 비활성화합니다.
   test.describe('네트워크 에러', () => {
-    test.use({ serviceWorkers: 'block' });
 
     test('이력 데이터를 불러오지 못하면 에러 메시지와 재시도 버튼이 표시된다 (error case)', async ({
       page,

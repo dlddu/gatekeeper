@@ -85,7 +85,7 @@ jobs:
             kubectl get pods -l app=gatekeeper -o jsonpath='{range .items[*]}{.metadata.name}{" init: "}{range .status.initContainerStatuses[*]}{.name}{"="}{.state}{" "}{end}{" containers: "}{range .status.containerStatuses[*]}{.name}{"="}{.state}{" "}{end}{"\n"}{end}' 2>/dev/null || true
             # 에러 상태인 경우 로그 조기 출력
             echo "-- init container logs --"
-            kubectl logs -l app=gatekeeper -c prisma-db-push --tail=20 --ignore-errors 2>/dev/null || true
+            kubectl logs -l app=gatekeeper -c prisma-db-push --tail=50 --ignore-errors 2>/dev/null || true
             echo "-- app container logs --"
             kubectl logs -l app=gatekeeper -c gatekeeper --tail=20 --ignore-errors 2>/dev/null || true
             sleep 5

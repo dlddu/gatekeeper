@@ -75,6 +75,7 @@ export default defineConfig({
       DATABASE_URL: `file:${testDBPath}`,
       JWT_SECRET: 'e2e-test-secret-key-must-be-at-least-32-chars!!',
       API_SECRET_KEY: 'e2e-test-api-key-valid',
+      NEXT_PUBLIC_VAPID_PUBLIC_KEY: 'BEl62iUYgUivxIkv69yViEuiBIa-Ib9-SkvMeAtA3LFgDzkrxZJjSgSnfckjBJuBkr3qBUYIHBQFLXYp5Nksh8U',
       VAPID_PUBLIC_KEY: 'BEl62iUYgUivxIkv69yViEuiBIa-Ib9-SkvMeAtA3LFgDzkrxZJjSgSnfckjBJuBkr3qBUYIHBQFLXYp5Nksh8U',
       VAPID_PRIVATE_KEY: 'UUxI4O8-HoGs86_GBRhFxGMpHMTKJmEXAZMFnTa5YCc',
       VAPID_SUBJECT: 'mailto:e2e-test@example.com',

@@ -1,30 +1,30 @@
 import { test, expect } from '@playwright/test';
 import { TEST_USERS } from './helpers/auth';
-import {
-  mockBrowserPushAPIs,
-  mockPushSubscriptionRoutes,
-  setupPushMocks,
-} from './helpers/push-mock';
+import { createTestPrismaClient, cleanupPushSubscriptions } from './helpers/db';
 
 /**
  * 설정 페이지 Push 알림 토글 E2E 테스트
  *
- * DLD-771: 작업 10-1: [설정 페이지 — Push 알림 토글] e2e 테스트 작성 (skipped)
+ * DLD-771: 작업 10-1: [설정 페이지 — Push 알림 토글] e2e 테스트 작성
  * 부모 이슈: DLD-645 (Gatekeeper — 승인 게이트웨이 서비스)
+ *
+ * 실제 브라우저 Push API + 실제 백엔드 API를 사용하여 테스트합니다.
+ * (push-mock 헬퍼 없이 실제 환경에 가까운 테스트)
  *
  * 커버리지:
  * - 설정 페이지 접근 시 "설정" 헤더 + Push 알림 토글 렌더링 확인
  * - BottomNav "설정" 탭 aria-current="page" active 상태 확인
+ * - 토글 ON → 실제 PushManager.subscribe() + POST /api/me/push/subscribe + DB 검증
+ * - 토글 OFF → 실제 unsubscribe() + DELETE /api/me/push/unsubscribe + DB 검증
  * - Push 미지원 브라우저 → 토글 disabled + 안내 문구 확인
  * - 알림 권한 denied 상태 → 토글 disabled + 차단 안내 문구 확인
- * - 토글 ON → POST /api/me/push/subscribe 호출 + 활성화 안내 텍스트 확인
- * - 토글 OFF → DELETE /api/me/push/unsubscribe 호출 + 기본 안내 텍스트 복귀 확인
  * - 미인증 상태로 접근 → /login 리다이렉트 확인
- *
- * TODO: DLD-772 구현 완료 후 test.describe.skip → test.describe 로 변경
  */
 
 test.describe('설정 페이지 Push 알림 토글 (/settings)', () => {
+  // Playwright 내장 기능으로 Notification 권한 자동 부여
+  test.use({ permissions: ['notifications'] });
+
   test.beforeEach(async ({ page }) => {
     // 관리자 로그인 (UI 기반)
     await page.goto('/login');
@@ -34,16 +34,19 @@ test.describe('설정 페이지 Push 알림 토글 (/settings)', () => {
     await expect(page).toHaveURL('/requests');
   });
 
+  test.afterEach(async () => {
+    // DB에서 admin 사용자의 push 구독 정리
+    await cleanupPushSubscriptions('admin');
+  });
+
   // --- happy path ---
 
   test('설정 페이지에 접근하면 "설정" 헤더와 Push 알림 토글이 렌더링된다 (happy path)', async ({
     page,
   }) => {
-    // Arrange: Push API 모킹 (page.goto 전에 호출해야 함)
-    await mockBrowserPushAPIs(page);
-
     // Act: 설정 페이지로 이동
     await page.goto('/settings');
+    await page.waitForFunction(() => navigator.serviceWorker?.ready);
 
     // Assert: 페이지 헤더 표시
     await expect(page.getByRole('heading', { name: '설정' })).toBeVisible();
@@ -55,11 +58,9 @@ test.describe('설정 페이지 Push 알림 토글 (/settings)', () => {
   test('설정 페이지에서 BottomNav "설정" 탭이 aria-current="page" active 상태로 표시된다 (happy path)', async ({
     page,
   }) => {
-    // Arrange: Push API 모킹
-    await mockBrowserPushAPIs(page);
-
     // Act: 설정 페이지로 이동
     await page.goto('/settings');
+    await page.waitForFunction(() => navigator.serviceWorker?.ready);
     await expect(page.getByRole('heading', { name: '설정' })).toBeVisible();
 
     // Assert: 하단 네비게이션에서 "설정" 탭이 active 상태
@@ -68,14 +69,12 @@ test.describe('설정 페이지 Push 알림 토글 (/settings)', () => {
     await expect(settingsNavItem).toHaveAttribute('aria-current', 'page');
   });
 
-  test('토글을 ON으로 전환하면 POST /api/me/push/subscribe가 호출되고 "알림이 활성화되어 있습니다" 텍스트가 표시된다 (happy path)', async ({
+  test('토글을 ON으로 전환하면 실제 구독이 생성되고 "알림이 활성화되어 있습니다" 텍스트가 표시된다 (happy path)', async ({
     page,
   }) => {
-    // Arrange: Push API 모킹 + 구독 API 라우트 모킹 (SW 차단 필요)
-    await setupPushMocks(page);
-
     // Act: 설정 페이지로 이동
     await page.goto('/settings');
+    await page.waitForFunction(() => navigator.serviceWorker?.ready);
     await expect(page.getByRole('heading', { name: '설정' })).toBeVisible();
 
     // Arrange: 구독 API 호출 대기 준비
@@ -92,18 +91,31 @@ test.describe('설정 페이지 Push 알림 토글 (/settings)', () => {
 
     // Assert: 활성화 안내 텍스트 표시
     await expect(page.getByText('알림이 활성화되어 있습니다')).toBeVisible();
+
+    // Assert: DB에 구독 레코드 존재
+    const prisma = await createTestPrismaClient();
+    try {
+      const sub = await prisma.pushSubscription.findFirst({
+        where: { user: { username: 'admin' } },
+      });
+      expect(sub).not.toBeNull();
+      expect(sub!.endpoint).toContain('https://');
+    } finally {
+      await prisma.$disconnect();
+    }
   });
 
-  test('토글을 OFF로 전환하면 DELETE /api/me/push/unsubscribe가 호출되고 기본 안내 텍스트로 복귀한다 (happy path)', async ({
+  test('토글을 OFF로 전환하면 구독이 해제되고 기본 안내 텍스트로 복귀한다 (happy path)', async ({
     page,
   }) => {
-    // Arrange: Push API 모킹 (초기 구독 중 상태) + 구독 API 라우트 모킹
-    await mockBrowserPushAPIs(page);
-    await mockPushSubscriptionRoutes(page);
-
-    // Act: 설정 페이지로 이동 (초기 상태: 구독 중 — mockBrowserPushAPIs가 getSubscription → mock 반환)
+    // Arrange: 먼저 실제 구독 생성
     await page.goto('/settings');
+    await page.waitForFunction(() => navigator.serviceWorker?.ready);
     await expect(page.getByRole('heading', { name: '설정' })).toBeVisible();
+
+    // Arrange: 토글 ON으로 구독 생성
+    await page.getByRole('switch', { name: /push/i }).click();
+    await expect(page.getByText('알림이 활성화되어 있습니다')).toBeVisible();
 
     // Assert: 초기 상태가 ON(구독 중)임을 명시적으로 확인
     await expect(page.getByRole('switch', { name: /push/i })).toBeChecked();
@@ -114,7 +126,7 @@ test.describe('설정 페이지 Push 알림 토글 (/settings)', () => {
         req.url().includes('/api/me/push/unsubscribe') && req.method() === 'DELETE'
     );
 
-    // Act: 토글 OFF (현재 ON 상태에서 클릭)
+    // Act: 토글 OFF
     await page.getByRole('switch', { name: /push/i }).click();
 
     // Assert: DELETE /api/me/push/unsubscribe 호출됨
@@ -127,6 +139,17 @@ test.describe('설정 페이지 Push 알림 토글 (/settings)', () => {
     await expect(
       page.getByText('Push 알림을 활성화하면 승인 요청 알림을 받을 수 있습니다')
     ).toBeVisible();
+
+    // Assert: DB에서 구독 레코드 삭제됨
+    const prisma = await createTestPrismaClient();
+    try {
+      const sub = await prisma.pushSubscription.findFirst({
+        where: { user: { username: 'admin' } },
+      });
+      expect(sub).toBeNull();
+    } finally {
+      await prisma.$disconnect();
+    }
   });
 
   // --- edge case ---
@@ -210,83 +233,5 @@ test.describe('설정 페이지 Push 알림 토글 (/settings)', () => {
     } finally {
       await context.close();
     }
-  });
-});
-
-test.describe('설정 페이지 Push 토글 API 연동', () => {
-
-  test.beforeEach(async ({ page }) => {
-    // 관리자 로그인 (UI 기반)
-    await page.goto('/login');
-    await page.getByLabel('아이디').fill(TEST_USERS.admin.username);
-    await page.getByLabel('비밀번호').fill(TEST_USERS.admin.password);
-    await page.getByRole('button', { name: '로그인' }).click();
-    await expect(page).toHaveURL('/requests');
-  });
-
-  test('토글 ON 시 POST /api/me/push/subscribe 요청이 실제로 인터셉트된다 (happy path)', async ({
-    page,
-  }) => {
-    // Arrange: Push API 모킹 (초기 미구독 상태) + 라우트 인터셉트 설정
-    await mockBrowserPushAPIs(page, { initiallySubscribed: false });
-    await mockPushSubscriptionRoutes(page);
-
-    // Act: 설정 페이지로 이동
-    await page.goto('/settings');
-    await expect(page.getByRole('heading', { name: '설정' })).toBeVisible();
-
-    // Arrange: 구독 API 요청 대기
-    const subscribeRequest = page.waitForRequest(
-      (req) =>
-        req.url().includes('/api/me/push/subscribe') && req.method() === 'POST'
-    );
-
-    // Act: 토글 ON 클릭
-    await page.getByRole('switch', { name: /push/i }).click();
-
-    // Assert: POST /api/me/push/subscribe 요청이 발생함
-    const req = await subscribeRequest;
-    expect(req.method()).toBe('POST');
-    expect(req.url()).toContain('/api/me/push/subscribe');
-
-    // Assert: 활성화 안내 텍스트 표시
-    await expect(page.getByText('알림이 활성화되어 있습니다')).toBeVisible();
-  });
-
-  test('토글 OFF 시 DELETE /api/me/push/unsubscribe 요청이 실제로 인터셉트된다 (happy path)', async ({
-    page,
-  }) => {
-    // Arrange: Push API 모킹 + 라우트 인터셉트 설정 (getSubscription → mock 반환으로 초기 ON 상태)
-    await mockBrowserPushAPIs(page);
-    await mockPushSubscriptionRoutes(page);
-
-    // Act: 설정 페이지로 이동
-    await page.goto('/settings');
-    await expect(page.getByRole('heading', { name: '설정' })).toBeVisible();
-
-    // Assert: 초기 상태가 ON(구독 중)임을 명시적으로 확인
-    await expect(page.getByRole('switch', { name: /push/i })).toBeChecked();
-
-    // Arrange: 구독 해제 API 요청 대기
-    const unsubscribeRequest = page.waitForRequest(
-      (req) =>
-        req.url().includes('/api/me/push/unsubscribe') && req.method() === 'DELETE'
-    );
-
-    // Act: 토글 OFF 클릭 (현재 ON 상태)
-    await page.getByRole('switch', { name: /push/i }).click();
-
-    // Assert: DELETE /api/me/push/unsubscribe 요청이 발생함
-    const req = await unsubscribeRequest;
-    expect(req.method()).toBe('DELETE');
-    expect(req.url()).toContain('/api/me/push/unsubscribe');
-
-    // Assert: 활성화 안내 텍스트가 사라짐
-    await expect(page.getByText('알림이 활성화되어 있습니다')).not.toBeVisible();
-
-    // Assert: 기본 안내 텍스트로 복귀
-    await expect(
-      page.getByText('Push 알림을 활성화하면 승인 요청 알림을 받을 수 있습니다')
-    ).toBeVisible();
   });
 });

@@ -261,4 +261,21 @@ export async function restoreProcessedRequests(saved: SavedProcessedRequest[]): 
   }
 }
 
+/**
+ * 특정 사용자의 Push 구독 데이터 정리
+ * settings.e2e.ts 등에서 테스트 후 cleanup에 사용
+ */
+export async function cleanupPushSubscriptions(username: string): Promise<void> {
+  const prisma = await createTestPrismaClient();
+
+  try {
+    const user = await prisma.user.findUnique({ where: { username } });
+    if (user) {
+      await prisma.pushSubscription.deleteMany({ where: { userId: user.id } });
+    }
+  } finally {
+    await prisma.$disconnect();
+  }
+}
+
 export { testDBUrl, testDBPath };

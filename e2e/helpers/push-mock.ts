@@ -37,87 +37,147 @@ export const MOCK_PUSH_SUBSCRIPTION: MockPushSubscription = {
  *
  * page.goto() 호출 전에 실행해야 합니다.
  * addInitScript는 페이지 로드 시마다 실행됩니다.
+ *
+ * @param page - Playwright Page 객체
+ * @param options.initiallySubscribed - true이면 getSubscription()이 mock 구독 반환 (기본값: true)
+ *   - true: 초기 구독 중 상태 (토글 OFF 테스트에 사용)
+ *   - false: 초기 미구독 상태 (토글 ON 테스트에 사용)
  */
-export async function mockBrowserPushAPIs(page: Page): Promise<void> {
-  await page.addInitScript((mockSubscription) => {
-    // Notification API 모킹
-    class MockNotification {
-      static permission: NotificationPermission = 'granted';
-      static requestPermission = async (): Promise<NotificationPermission> => 'granted';
+export async function mockBrowserPushAPIs(
+  page: Page,
+  options: { initiallySubscribed?: boolean } = {}
+): Promise<void> {
+  const { initiallySubscribed = true } = options;
 
-      constructor(
-        public title: string,
-        public options?: NotificationOptions
-      ) {}
+  await page.addInitScript(
+    ({ mockSubscription, initiallySubscribed }) => {
+      // Notification API 모킹
+      class MockNotification {
+        static permission: NotificationPermission = 'granted';
+        static requestPermission = async (): Promise<NotificationPermission> => 'granted';
 
-      close() {}
-      addEventListener() {}
-      removeEventListener() {}
-      dispatchEvent() { return true; }
-    }
+        constructor(
+          public title: string,
+          public options?: NotificationOptions
+        ) {}
 
-    // @ts-expect-error - 브라우저 전역 Notification 교체
-    window.Notification = MockNotification;
+        close() {}
+        addEventListener() {}
+        removeEventListener() {}
+        dispatchEvent() { return true; }
+      }
 
-    // PushSubscription 모킹
-    const mockPushSubscriptionObj = {
-      endpoint: mockSubscription.endpoint,
-      getKey: (name: string) => {
-        const keys: Record<string, string> = {
-          p256dh: mockSubscription.keys.p256dh,
-          auth: mockSubscription.keys.auth,
-        };
-        const val = keys[name];
-        if (!val) return null;
-        // base64url → ArrayBuffer 변환
-        const base64 = val.replace(/-/g, '+').replace(/_/g, '/');
-        const binary = atob(base64);
-        const buffer = new ArrayBuffer(binary.length);
-        const bytes = new Uint8Array(buffer);
-        for (let i = 0; i < binary.length; i++) {
-          bytes[i] = binary.charCodeAt(i);
-        }
-        return buffer;
-      },
-      toJSON: () => ({
+      // @ts-expect-error - 브라우저 전역 Notification 교체
+      window.Notification = MockNotification;
+
+      // stateful 구독 상태 플래그 초기화
+      (window as any).__PUSH_SUBSCRIBED__ = initiallySubscribed;
+
+      // PushSubscription 모킹
+      const mockPushSubscriptionObj = {
         endpoint: mockSubscription.endpoint,
-        keys: mockSubscription.keys,
-      }),
-      unsubscribe: async () => true,
-    };
-
-    // PushManager 모킹
-    const MockPushManager = {
-      getSubscription: async () => mockPushSubscriptionObj,
-      subscribe: async () => mockPushSubscriptionObj,
-      permissionState: async () => 'granted' as PermissionState,
-    };
-
-    // ServiceWorkerRegistration에 PushManager 주입
-    const originalGetRegistration =
-      navigator.serviceWorker?.getRegistration?.bind(navigator.serviceWorker);
-
-    if (navigator.serviceWorker) {
-      Object.defineProperty(navigator.serviceWorker, 'getRegistration', {
-        value: async (...args: Parameters<typeof originalGetRegistration>) => {
-          const registration = originalGetRegistration
-            ? await originalGetRegistration(...args)
-            : undefined;
-          if (registration) {
-            Object.defineProperty(registration, 'pushManager', {
-              get: () => MockPushManager,
-              configurable: true,
-            });
+        getKey: (name: string) => {
+          const keys: Record<string, string> = {
+            p256dh: mockSubscription.keys.p256dh,
+            auth: mockSubscription.keys.auth,
+          };
+          const val = keys[name];
+          if (!val) return null;
+          // base64url → ArrayBuffer 변환
+          const base64 = val.replace(/-/g, '+').replace(/_/g, '/');
+          const binary = atob(base64);
+          const buffer = new ArrayBuffer(binary.length);
+          const bytes = new Uint8Array(buffer);
+          for (let i = 0; i < binary.length; i++) {
+            bytes[i] = binary.charCodeAt(i);
           }
-          return registration;
+          return buffer;
         },
-        configurable: true,
-      });
-    }
+        toJSON: () => ({
+          endpoint: mockSubscription.endpoint,
+          keys: mockSubscription.keys,
+        }),
+        unsubscribe: async () => {
+          (window as any).__PUSH_SUBSCRIBED__ = false;
+          return true;
+        },
+      };
 
-    // window에 직접 모킹 플래그 노출 (테스트에서 확인 가능)
-    (window as unknown as Window & { __E2E_PUSH_MOCKED__: boolean }).__E2E_PUSH_MOCKED__ = true;
-  }, MOCK_PUSH_SUBSCRIPTION);
+      // PushManager 모킹 (stateful)
+      const MockPushManager = {
+        getSubscription: async () => {
+          return (window as any).__PUSH_SUBSCRIBED__ ? mockPushSubscriptionObj : null;
+        },
+        subscribe: async () => {
+          (window as any).__PUSH_SUBSCRIBED__ = true;
+          return mockPushSubscriptionObj;
+        },
+        permissionState: async () => 'granted' as PermissionState,
+      };
+
+      // SW 없는 환경(serviceWorkers: 'block')을 위한 fakeRegistration
+      const fakeRegistration = {
+        active: { state: 'activated' },
+        installing: null,
+        waiting: null,
+        scope: '/',
+        updateViaCache: 'none' as ServiceWorkerUpdateViaCache,
+        pushManager: MockPushManager,
+        addEventListener: () => {},
+        removeEventListener: () => {},
+        dispatchEvent: () => true,
+        update: async () => {},
+        unregister: async () => true,
+        showNotification: async () => {},
+        getNotifications: async () => [],
+        navigationPreload: {
+          enable: async () => {},
+          disable: async () => {},
+          setHeaderValue: async () => {},
+          getState: async () => ({ enabled: false, headerValue: '' }),
+        },
+        sync: { register: async () => {}, getTags: async () => [] },
+        periodicSync: { register: async () => {}, unregister: async () => {}, getTags: async () => [] },
+        index: { add: async () => {}, delete: async () => {}, getAll: async () => [] },
+        cookies: { getAll: async () => [], set: async () => {}, delete: async () => {} },
+        backgroundFetch: {
+          fetch: async () => ({}),
+          get: async () => undefined,
+          getIds: async () => [],
+        },
+        paymentManager: { userHint: '', instruments: { keys: async () => [], has: async () => false, get: async () => undefined, set: async () => {}, delete: async () => false, clear: async () => {}, entries: async () => [], values: async () => [], forEach: async () => {} } },
+        onupdatefound: null,
+      };
+
+      // ServiceWorkerRegistration에 PushManager 주입
+      const originalGetRegistration =
+        navigator.serviceWorker?.getRegistration?.bind(navigator.serviceWorker);
+
+      if (navigator.serviceWorker) {
+        Object.defineProperty(navigator.serviceWorker, 'getRegistration', {
+          value: async (...args: Parameters<typeof originalGetRegistration>) => {
+            const registration = originalGetRegistration
+              ? await originalGetRegistration(...args)
+              : undefined;
+            if (registration) {
+              Object.defineProperty(registration, 'pushManager', {
+                get: () => MockPushManager,
+                configurable: true,
+              });
+              return registration;
+            }
+            // SW가 없거나 차단된 환경에서는 fakeRegistration 반환
+            return fakeRegistration;
+          },
+          configurable: true,
+        });
+      }
+
+      // window에 직접 모킹 플래그 노출 (테스트에서 확인 가능)
+      (window as unknown as Window & { __E2E_PUSH_MOCKED__: boolean }).__E2E_PUSH_MOCKED__ = true;
+    },
+    { mockSubscription: MOCK_PUSH_SUBSCRIPTION, initiallySubscribed }
+  );
 }
 
 /**
@@ -173,11 +233,16 @@ export async function mockPushSubscriptionRoutes(
 
 /**
  * Push API 모킹 전체 적용 (브라우저 API + 라우트)
+ *
+ * 초기 상태: 미구독 (initiallySubscribed: false)
+ * 토글 ON 테스트에 적합합니다.
+ * 토글 OFF 테스트는 mockBrowserPushAPIs + mockPushSubscriptionRoutes를 직접 사용하세요.
  */
 export async function setupPushMocks(
   page: Page,
   options: { failSubscription?: boolean } = {}
 ): Promise<void> {
-  await mockBrowserPushAPIs(page);
+  // initiallySubscribed: false — 토글 ON 테스트를 위해 초기 미구독 상태로 설정
+  await mockBrowserPushAPIs(page, { initiallySubscribed: false });
   await mockPushSubscriptionRoutes(page, options);
 }

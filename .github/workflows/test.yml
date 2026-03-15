@@ -36,6 +36,7 @@ jobs:
           VAPID_PUBLIC_KEY: test-vapid-public-key-for-ci
           VAPID_PRIVATE_KEY: test-vapid-private-key-for-ci
           VAPID_SUBJECT: mailto:test@example.com
+          NEXT_PUBLIC_VAPID_PUBLIC_KEY: test-vapid-public-key-for-ci
 
       - name: Run tests with coverage
         run: npm run test:coverage
@@ -45,3 +46,4 @@ jobs:
           VAPID_PUBLIC_KEY: test-vapid-public-key-for-ci
           VAPID_PRIVATE_KEY: test-vapid-private-key-for-ci
           VAPID_SUBJECT: mailto:test@example.com
+          NEXT_PUBLIC_VAPID_PUBLIC_KEY: test-vapid-public-key-for-ci

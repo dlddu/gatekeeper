@@ -24,7 +24,7 @@ import {
  * TODO: DLD-772 구현 완료 후 test.describe.skip → test.describe 로 변경
  */
 
-test.describe.skip('설정 페이지 Push 알림 토글 (/settings)', () => {
+test.describe('설정 페이지 Push 알림 토글 (/settings)', () => {
   test.beforeEach(async ({ page }) => {
     // 관리자 로그인 (UI 기반)
     await page.goto('/login');
@@ -97,8 +97,9 @@ test.describe.skip('설정 페이지 Push 알림 토글 (/settings)', () => {
   test('토글을 OFF로 전환하면 DELETE /api/me/push/unsubscribe가 호출되고 기본 안내 텍스트로 복귀한다 (happy path)', async ({
     page,
   }) => {
-    // Arrange: Push API 모킹 + 구독 API 라우트 모킹
-    await setupPushMocks(page);
+    // Arrange: Push API 모킹 (초기 구독 중 상태) + 구독 API 라우트 모킹
+    await mockBrowserPushAPIs(page);
+    await mockPushSubscriptionRoutes(page);
 
     // Act: 설정 페이지로 이동 (초기 상태: 구독 중 — mockBrowserPushAPIs가 getSubscription → mock 반환)
     await page.goto('/settings');
@@ -216,7 +217,7 @@ test.describe.skip('설정 페이지 Push 알림 토글 (/settings)', () => {
  * Service Worker가 page.route() 인터셉트를 방해하는 경우에 대비하여
  * API 호출 검증 테스트는 별도 describe 블록에서 SW를 비활성화합니다.
  */
-test.describe.skip('설정 페이지 Push 토글 API 연동 (SW 차단)', () => {
+test.describe('설정 페이지 Push 토글 API 연동 (SW 차단)', () => {
   test.use({ serviceWorkers: 'block' });
 
   test.beforeEach(async ({ page }) => {
@@ -231,8 +232,8 @@ test.describe.skip('설정 페이지 Push 토글 API 연동 (SW 차단)', () => 
   test('토글 ON 시 POST /api/me/push/subscribe 요청이 실제로 인터셉트된다 (happy path)', async ({
     page,
   }) => {
-    // Arrange: Push API 모킹 + 라우트 인터셉트 설정
-    await mockBrowserPushAPIs(page);
+    // Arrange: Push API 모킹 (초기 미구독 상태) + 라우트 인터셉트 설정
+    await mockBrowserPushAPIs(page, { initiallySubscribed: false });
     await mockPushSubscriptionRoutes(page);
 
     // Act: 설정 페이지로 이동

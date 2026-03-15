@@ -1,0 +1,213 @@
+name: E2E Tests (Kind)
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  e2e-kind:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - uses: actions/checkout@v4
+
+      # Kind 클러스터 생성
+      - name: Create Kind cluster
+        uses: helm/kind-action@v1
+        with:
+          cluster_name: gatekeeper-e2e
+
+      # Docker 이미지 빌드
+      - name: Build Docker image
+        run: docker build -t gatekeeper:e2e .
+
+      # Kind 클러스터에 이미지 로드
+      - name: Load image into Kind
+        run: kind load docker-image gatekeeper:e2e --name gatekeeper-e2e
+
+      # 이미지가 Kind에 정상 로드되었는지 확인
+      - name: Verify image loaded in Kind
+        run: |
+          docker exec gatekeeper-e2e-control-plane crictl images | grep gatekeeper || echo "WARNING: image not found in Kind node"
+
+      # Kubernetes Secret 생성 (테스트용)
+      - name: Create Kubernetes secrets
+        run: |
+          kubectl create secret generic gatekeeper-secrets \
+            --from-literal=JWT_SECRET='e2e-test-secret-key-must-be-at-least-32-chars!!' \
+            --from-literal=VAPID_PUBLIC_KEY='BEl62iUYgUivxIkv69yViEuiBIa-Ib9-SkvMeAtA3LFgDzkrxZJjSgSnfckjBJuBkr3qBUYIHBQFLXYp5Nksh8U' \
+            --from-literal=VAPID_PRIVATE_KEY='UUxI4O8-HoGs86_GBRhFxGMpHMTKJmEXAZMFnTa5YCc' \
+            --from-literal=API_SECRET_KEY='e2e-test-api-key-valid'
+
+      # K8s 매니페스트 배포 (이미지를 로컬 빌드로 교체)
+      - name: Deploy to Kind cluster
+        run: |
+          kubectl apply -f k8s/pvc.yaml
+          kubectl apply -f k8s/service.yaml
+
+          # 로컬 이미지 사용하도록 deployment 수정 후 배포
+          sed 's|ghcr.io/dlddu/gatekeeper:latest|gatekeeper:e2e|g' k8s/deployment.yaml \
+            | kubectl apply -f -
+
+          # Kind에서 로컬 이미지를 사용하므로 imagePullPolicy를 Never로 설정하고 API_SECRET_KEY 추가
+          kubectl patch deployment gatekeeper --type=json \
+            -p='[
+              {"op":"replace","path":"/spec/template/spec/initContainers/0/imagePullPolicy","value":"Never"},
+              {"op":"replace","path":"/spec/template/spec/containers/0/imagePullPolicy","value":"Never"},
+              {"op":"add","path":"/spec/template/spec/containers/0/env/-","value":{"name":"API_SECRET_KEY","valueFrom":{"secretKeyRef":{"name":"gatekeeper-secrets","key":"API_SECRET_KEY"}}}}
+            ]'
+
+      # 배포 전 상태 확인
+      - name: Debug pre-rollout state
+        run: |
+          echo "=== PVC Status ==="
+          kubectl get pvc
+          echo ""
+          echo "=== Deployment Status ==="
+          kubectl get deployment gatekeeper -o wide
+          echo ""
+          echo "=== Pods ==="
+          kubectl get pods -l app=gatekeeper -o wide
+
+      # Pod가 Ready 상태가 될 때까지 대기 (디버그 로그 포함)
+      - name: Wait for deployment rollout
+        run: |
+          for i in $(seq 1 36); do
+            STATUS=$(kubectl rollout status deployment/gatekeeper --timeout=5s 2>&1) && {
+              echo "Rollout complete: $STATUS"
+              exit 0
+            }
+            echo "--- Attempt $i/36 ---"
+            kubectl get pods -l app=gatekeeper -o wide
+            # Init/App 컨테이너 상태 출력
+            kubectl get pods -l app=gatekeeper -o jsonpath='{range .items[*]}{.metadata.name}{" init: "}{range .status.initContainerStatuses[*]}{.name}{"="}{.state}{" "}{end}{" containers: "}{range .status.containerStatuses[*]}{.name}{"="}{.state}{" "}{end}{"\n"}{end}' 2>/dev/null || true
+            # 에러 상태인 경우 로그 조기 출력
+            echo "-- init container logs --"
+            kubectl logs -l app=gatekeeper -c prisma-db-push --tail=50 --ignore-errors 2>/dev/null || true
+            echo "-- app container logs --"
+            kubectl logs -l app=gatekeeper -c gatekeeper --tail=20 --ignore-errors 2>/dev/null || true
+            sleep 5
+          done
+          echo "Rollout timed out after 180s"
+          exit 1
+
+      # 앱 헬스 체크 로그 확인
+      - name: Verify app health
+        run: |
+          kubectl get pods -l app=gatekeeper
+          kubectl wait --for=condition=ready pod -l app=gatekeeper --timeout=120s
+
+      # 포트 포워딩 설정 (백그라운드)
+      - name: Setup port forwarding
+        run: |
+          kubectl port-forward svc/gatekeeper 3001:80 &
+          echo $! > /tmp/port-forward.pid
+
+          # 포트 포워딩이 준비될 때까지 대기
+          for i in $(seq 1 30); do
+            if curl -sf http://localhost:3001/api/health > /dev/null 2>&1; then
+              echo "Port forwarding is ready"
+              break
+            fi
+            echo "Waiting for port forwarding... ($i/30)"
+            sleep 2
+          done
+
+          # 최종 헬스 체크
+          curl -sf http://localhost:3001/api/health || (echo "Health check failed"; exit 1)
+
+      # Node.js 및 Playwright 설정
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Get Playwright version
+        id: playwright-version
+        run: |
+          echo "version=$(node -p "require('./node_modules/@playwright/test/package.json').version")" >> "$GITHUB_OUTPUT"
+
+      - name: Cache Playwright browsers
+        id: playwright-cache
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ runner.os }}-${{ steps.playwright-version.outputs.version }}
+          restore-keys: |
+            playwright-${{ runner.os }}-
+
+      - name: Install Playwright browsers
+        if: steps.playwright-cache.outputs.cache-hit != 'true'
+        run: npx playwright install --with-deps chromium
+
+      - name: Install Playwright system dependencies
+        if: steps.playwright-cache.outputs.cache-hit == 'true'
+        run: npx playwright install-deps chromium
+
+      # Kind 클러스터에 배포된 앱에 대해 E2E 테스트 실행
+      - name: Run E2E tests
+        run: npx playwright test --config=playwright.kind.config.ts
+        env:
+          CI: 'true'
+          E2E_BASE_URL: 'http://localhost:3001'
+          API_SECRET_KEY: 'e2e-test-api-key-valid'
+
+      # 디버깅용 로그 수집 (실패 시)
+      - name: Collect debug info
+        if: failure()
+        run: |
+          echo "=== PVC Status ==="
+          kubectl get pvc -o wide
+          echo ""
+          echo "=== Pod Status ==="
+          kubectl get pods -l app=gatekeeper -o wide
+          echo ""
+          echo "=== Pod Describe ==="
+          kubectl describe pods -l app=gatekeeper
+          echo ""
+          echo "=== Init Container Logs (full) ==="
+          kubectl logs -l app=gatekeeper -c prisma-db-push --ignore-errors 2>&1 || true
+          echo ""
+          echo "=== App Container Logs (full) ==="
+          kubectl logs -l app=gatekeeper -c gatekeeper --ignore-errors 2>&1 || true
+          echo ""
+          echo "=== Previous App Container Logs ==="
+          kubectl logs -l app=gatekeeper -c gatekeeper --previous --ignore-errors 2>&1 || true
+          echo ""
+          echo "=== Events ==="
+          kubectl get events --sort-by='.lastTimestamp'
+          echo ""
+          echo "=== Node Conditions ==="
+          kubectl describe node | grep -A5 "Conditions:"
+          echo ""
+          echo "=== Deployment YAML (patched) ==="
+          kubectl get deployment gatekeeper -o yaml
+
+      - name: Upload Playwright report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report-kind-${{ github.run_id }}
+          path: playwright-report/
+          retention-days: 14
+
+      - name: Upload test results (traces, screenshots, videos)
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-results-kind-${{ github.run_id }}
+          path: test-results/
+          retention-days: 7
+
+      # 정리
+      - name: Cleanup port forwarding
+        if: always()
+        run: |
+          if [ -f /tmp/port-forward.pid ]; then
+            kill "$(cat /tmp/port-forward.pid)" 2>/dev/null || true
+          fi

@@ -50,6 +50,11 @@ spec:
                 secretKeyRef:
                   name: gatekeeper-secrets
                   key: VAPID_PRIVATE_KEY
+            - name: API_SECRET_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: gatekeeper-secrets
+                  key: API_SECRET_KEY
           volumeMounts:
             - name: data
               mountPath: /app/data

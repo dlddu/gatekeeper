@@ -50,6 +50,11 @@ spec:
                 secretKeyRef:
                   name: gatekeeper-secrets
                   key: VAPID_PRIVATE_KEY
+            - name: VAPID_SUBJECT
+              valueFrom:
+                secretKeyRef:
+                  name: gatekeeper-secrets
+                  key: VAPID_SUBJECT
             - name: API_SECRET_KEY
               valueFrom:
                 secretKeyRef:

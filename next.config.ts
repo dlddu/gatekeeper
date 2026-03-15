@@ -2,6 +2,10 @@ import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
   output: "standalone",
+  env: {
+    NEXT_PUBLIC_VAPID_PUBLIC_KEY:
+      process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY || process.env.VAPID_PUBLIC_KEY || "",
+  },
   async headers() {
     return [
       {

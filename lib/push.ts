@@ -46,6 +46,12 @@ export async function sendPushNotifications(options: SendPushOptions): Promise<v
 
   const payload = JSON.stringify({ title, body });
 
+  console.log(`[Push] 발송 시작: ${subscriptions.length}건, title="${title}"`);
+
+  let successCount = 0;
+  let failCount = 0;
+  let expiredCount = 0;
+
   for (const subscription of subscriptions) {
     try {
       await webpush.sendNotification(
@@ -58,6 +64,7 @@ export async function sendPushNotifications(options: SendPushOptions): Promise<v
         },
         payload
       );
+      successCount++;
       if (onSuccess) {
         onSuccess();
       }
@@ -68,11 +75,21 @@ export async function sendPushNotifications(options: SendPushOptions): Promise<v
         'statusCode' in error &&
         (error as { statusCode: number }).statusCode === 410
       ) {
+        expiredCount++;
+        console.warn(`[Push] 구독 만료(410): endpoint=${subscription.endpoint}`);
         if (onExpired) {
           await onExpired(subscription.endpoint);
         }
+      } else {
+        failCount++;
+        const statusCode = typeof error === 'object' && error !== null && 'statusCode' in error
+          ? (error as { statusCode: number }).statusCode
+          : 'unknown';
+        console.error(`[Push] 발송 실패: endpoint=${subscription.endpoint}, statusCode=${statusCode}, error=${error}`);
       }
       // 개별 발송 실패는 무시하고 계속 진행
     }
   }
+
+  console.log(`[Push] 발송 완료: 성공=${successCount}, 실패=${failCount}, 만료=${expiredCount}`);
 }

@@ -15,12 +15,15 @@ export async function POST(request: NextRequest): Promise<Response> {
   const body = await request.json();
   const { userId, title, body: notificationBody } = body;
 
+  console.log(`[Push API] /api/push/send 요청: userId=${userId}, title="${title}"`);
+
   // 대상 사용자의 구독 목록 조회
   const subscriptions = await prisma.pushSubscription.findMany({
     where: { userId },
   });
 
   if (subscriptions.length === 0) {
+    console.log(`[Push API] 구독 없음: userId=${userId}`);
     return new Response(JSON.stringify({ success: true, sent: 0 }), {
       status: 200,
       headers: { 'Content-Type': 'application/json' },
@@ -42,6 +45,8 @@ export async function POST(request: NextRequest): Promise<Response> {
       sentCount++;
     },
   });
+
+  console.log(`[Push API] /api/push/send 완료: userId=${userId}, sent=${sentCount}`);
 
   return new Response(JSON.stringify({ success: true, sent: sentCount }), {
     status: 200,

@@ -172,6 +172,12 @@ export async function mockBrowserPushAPIs(
           },
           configurable: true,
         });
+
+        // navigator.serviceWorker.ready도 모킹 (SW 차단 환경 대응)
+        Object.defineProperty(navigator.serviceWorker, 'ready', {
+          get: () => Promise.resolve(fakeRegistration),
+          configurable: true,
+        });
       }
 
       // window에 직접 모킹 플래그 노출 (테스트에서 확인 가능)

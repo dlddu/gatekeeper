@@ -29,7 +29,8 @@ jobs:
 
       # 이미지가 Kind에 정상 로드되었는지 확인
       - name: Verify image loaded in Kind
-        run: docker exec gatekeeper-e2e-control-plane crictl images | grep gatekeeper || echo "WARNING: image not found in Kind node"
+        run: |
+          docker exec gatekeeper-e2e-control-plane crictl images | grep gatekeeper || echo "WARNING: image not found in Kind node"
 
       # Kubernetes Secret 생성 (테스트용)
       - name: Create Kubernetes secrets

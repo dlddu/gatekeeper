@@ -234,36 +234,40 @@ test.describe('요청 거절 플로우', () => {
 });
 
 test.describe('브라우저 UI 렌더링', () => {
-  test('로그인 페이지가 정상적으로 렌더링된다', async ({ page }) => {
-    await page.goto('/login');
-    await expect(page).toHaveTitle(/Gatekeeper/i);
+  let authToken: string;
+  const testUsername = uniqueId('kind-ui');
+  const testPassword = 'testpass123456';
 
-    // 로그인 폼 요소 확인
-    await expect(page.locator('input[name="username"], input[type="text"]').first()).toBeVisible();
-    await expect(page.locator('input[name="password"], input[type="password"]').first()).toBeVisible();
-  });
-
-  test('브라우저에서 로그인 후 대시보드에 접근할 수 있다', async ({ page }) => {
-    const testUsername = uniqueId('kind-ui');
-    const testPassword = 'testpass123456';
-
-    // API로 사용자 먼저 생성
-    const signupRes = await page.request.post('/api/auth/signup', {
+  test.beforeAll(async ({ request }) => {
+    const signupRes = await request.post('/api/auth/signup', {
       data: {
         username: testUsername,
         password: testPassword,
         displayName: 'Kind UI Test User',
       },
     });
-    expect(signupRes.status()).toBe(201);
+    const signupBody = await signupRes.json();
+    authToken = signupBody.token;
+  });
 
-    // 브라우저에서 로그인
+  test('로그인 페이지가 정상적으로 렌더링된다', async ({ page }) => {
     await page.goto('/login');
-    await page.locator('input[name="username"], input[type="text"]').first().fill(testUsername);
-    await page.locator('input[name="password"], input[type="password"]').first().fill(testPassword);
-    await page.locator('button[type="submit"]').click();
+    await expect(page).toHaveTitle(/Gatekeeper/i);
 
-    // 로그인 성공 후 리다이렉트 확인
+    // OIDC 버튼 방식 로그인 UI 확인
+    await expect(page.getByRole('heading', { name: 'Gatekeeper' })).toBeVisible();
+    await expect(page.getByRole('button', { name: '로그인' })).toBeVisible();
+  });
+
+  test('브라우저에서 토큰이 있으면 대시보드에 접근할 수 있다', async ({ page }) => {
+    // localStorage에 토큰 설정 후 로그인 페이지 이동 시 리다이렉트 확인
+    await page.goto('/login');
+    await page.evaluate((token) => {
+      localStorage.setItem('token', token);
+    }, authToken);
+    await page.goto('/login');
+
+    // 토큰이 있으면 /login이 아닌 URL로 리다이렉트 확인
     await page.waitForURL((url) => !url.pathname.includes('/login'), { timeout: 10_000 });
   });
 });

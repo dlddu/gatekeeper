@@ -14,7 +14,7 @@
  */
 
 import http from 'http';
-import { jwtVerify, createRemoteJWKSet, importJWK } from 'jose';
+import { jwtVerify, importJWK } from 'jose';
 
 // ----------------------------------------------------------------
 // 테스트 대상 import
@@ -279,9 +279,9 @@ describe('OIDC Mock Server (e2e/helpers/oidc-mock.ts)', () => {
         const body = JSON.parse(res.body);
 
         // Assert
-        expect(body.authorization_endpoint).toStartWith(ISSUER);
-        expect(body.token_endpoint).toStartWith(ISSUER);
-        expect(body.jwks_uri).toStartWith(ISSUER);
+        expect(body.authorization_endpoint.startsWith(ISSUER)).toBe(true);
+        expect(body.token_endpoint.startsWith(ISSUER)).toBe(true);
+        expect(body.jwks_uri.startsWith(ISSUER)).toBe(true);
       });
     });
 

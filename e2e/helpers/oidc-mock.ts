@@ -12,7 +12,7 @@
  */
 
 import http from 'http';
-import { generateKeyPair, exportJWK, SignJWT, type KeyLike } from 'jose';
+import { generateKeyPair, exportJWK, SignJWT } from 'jose';
 import crypto from 'crypto';
 
 // ----------------------------------------------------------------
@@ -26,10 +26,10 @@ let server: http.Server | null = null;
 let currentPort: number | null = null;
 
 /** RS256 서명에 사용할 개인키 */
-let privateKey: KeyLike | null = null;
+let privateKey: CryptoKey | null = null;
 
 /** RS256 서명 검증에 사용할 공개키 */
-let publicKey: KeyLike | null = null;
+let publicKey: CryptoKey | null = null;
 
 /** 발급된 Authorization Code를 저장하는 일회성 Map (code → client_id) */
 const pendingCodes = new Map<string, string>();
@@ -168,7 +168,7 @@ async function handleJwks(res: http.ServerResponse): Promise<void> {
   const jwk = await exportJWK(publicKey!);
 
   // 개인키 필드(d, p, q, dp, dq, qi)가 있으면 제거 (공개키만 노출)
-  const { d, p, q, dp, dq, qi, ...publicJwk } = jwk as typeof jwk & {
+  const { d: _d, p: _p, q: _q, dp: _dp, dq: _dq, qi: _qi, ...publicJwk } = jwk as typeof jwk & {
     d?: string; p?: string; q?: string; dp?: string; dq?: string; qi?: string;
   };
 
@@ -231,8 +231,8 @@ export async function startOidcMockServer(port: number): Promise<void> {
 
   // RSA 키페어 생성 (RS256)
   const keyPair = await generateKeyPair('RS256');
-  privateKey = keyPair.privateKey as KeyLike;
-  publicKey = keyPair.publicKey as KeyLike;
+  privateKey = keyPair.privateKey as CryptoKey;
+  publicKey = keyPair.publicKey as CryptoKey;
 
   currentPort = port;
   pendingCodes.clear();

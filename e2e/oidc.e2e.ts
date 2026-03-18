@@ -34,7 +34,7 @@ const OIDC_SEED_USER = {
 } as const;
 
 // TODO: Activate when DLD-797 is implemented
-test.describe.skip('GET /api/auth/oidc/authorize (OIDC 인증 시작)', () => {
+test.describe('GET /api/auth/oidc/authorize (OIDC 인증 시작)', () => {
   test('/api/auth/oidc/authorize 호출 시 mock Authentik으로 302 리다이렉트된다 (happy path)', async ({
     request,
   }) => {
@@ -102,7 +102,7 @@ test.describe.skip('GET /api/auth/oidc/authorize (OIDC 인증 시작)', () => {
 });
 
 // TODO: Activate when DLD-797 is implemented
-test.describe.skip('GET /api/auth/oidc/callback (신규 사용자 auto-provisioning)', () => {
+test.describe('GET /api/auth/oidc/callback (신규 사용자 auto-provisioning)', () => {
   // 테스트에서 생성된 사용자를 정리하기 위한 추적 목록
   const provisionedUsernames: string[] = [];
 
@@ -235,7 +235,7 @@ test.describe.skip('GET /api/auth/oidc/callback (신규 사용자 auto-provision
 });
 
 // TODO: Activate when DLD-797 is implemented
-test.describe.skip('GET /api/auth/oidc/callback (기존 OIDC 사용자 재로그인)', () => {
+test.describe('GET /api/auth/oidc/callback (기존 OIDC 사용자 재로그인)', () => {
   test('기존 OIDC 사용자(같은 oidcSub)로 재로그인 시 User 중복 생성 없이 기존 User의 JWT를 반환한다 (happy path)', async ({
     request,
   }) => {
@@ -275,7 +275,9 @@ test.describe.skip('GET /api/auth/oidc/callback (기존 OIDC 사용자 재로그
     const authorizeLocation = authorizeResponse.headers()['location'];
     const state = new URL(authorizeLocation).searchParams.get('state')!;
 
-    const mockAuthorizeResponse = await request.get(authorizeLocation, {
+    // mock Authentik에 고정 sub를 전달하여 기존 사용자의 oidcSub와 일치하는 id_token 발급
+    const mockAuthorizeUrl = `${authorizeLocation}&sub=${OIDC_SEED_USER.oidcSub}`;
+    const mockAuthorizeResponse = await request.get(mockAuthorizeUrl, {
       maxRedirects: 0,
     });
     const callbackLocation = mockAuthorizeResponse.headers()['location'];
@@ -312,7 +314,7 @@ test.describe.skip('GET /api/auth/oidc/callback (기존 OIDC 사용자 재로그
 });
 
 // TODO: Activate when DLD-797 is implemented
-test.describe.skip('GET /api/auth/oidc/callback (보안 검증)', () => {
+test.describe('GET /api/auth/oidc/callback (보안 검증)', () => {
   test('잘못된 state 파라미터로 callback 호출 시 에러 응답을 반환한다 (security)', async ({
     request,
   }) => {

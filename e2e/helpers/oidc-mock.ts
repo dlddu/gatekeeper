@@ -31,8 +31,8 @@ let privateKey: CryptoKey | null = null;
 /** RS256 서명 검증에 사용할 공개키 */
 let publicKey: CryptoKey | null = null;
 
-/** 발급된 Authorization Code를 저장하는 일회성 Map (code → client_id) */
-const pendingCodes = new Map<string, string>();
+/** 발급된 Authorization Code를 저장하는 일회성 Map (code → { clientId, sub?, nonce? }) */
+const pendingCodes = new Map<string, { clientId: string; sub?: string; nonce?: string }>();
 
 // ----------------------------------------------------------------
 // 헬퍼
@@ -100,7 +100,9 @@ function handleAuthorize(req: http.IncomingMessage, res: http.ServerResponse): v
 
   // 일회성 Authorization Code 생성
   const code = crypto.randomUUID();
-  pendingCodes.set(code, clientId);
+  const sub = url.searchParams.get('sub') ?? undefined;
+  const nonce = url.searchParams.get('nonce') ?? undefined;
+  pendingCodes.set(code, { clientId, sub, nonce });
 
   // redirect_uri?code=...&state=... 으로 302 리다이렉트
   const redirectUrl = new URL(redirectUri);
@@ -131,17 +133,20 @@ async function handleToken(req: http.IncomingMessage, res: http.ServerResponse):
   }
 
   // 일회성 사용: code 소진
+  const codeData = pendingCodes.get(code)!;
   pendingCodes.delete(code);
 
   const issuer = `http://localhost:${currentPort}`;
-  const sub = crypto.randomUUID();
+  const sub = codeData.sub ?? crypto.randomUUID();
   const email = `user-${sub.slice(0, 8)}@mock.example.com`;
   const now = Math.floor(Date.now() / 1000);
 
   // RS256으로 id_token 서명
+  const nonce = codeData.nonce;
   const idToken = await new SignJWT({
     sub,
     email,
+    ...(nonce ? { nonce } : {}),
   })
     .setProtectedHeader({ alg: 'RS256' })
     .setIssuedAt(now)

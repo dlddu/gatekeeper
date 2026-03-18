@@ -79,6 +79,35 @@ describe('prisma/schema.prisma', () => {
       const userModelMatch = schemaContent.match(/model User \{([^}]+)\}/s);
       expect(userModelMatch![1]).toMatch(/username.*@unique|@unique.*username/);
     });
+
+    // ----------------------------------------------------------------
+    // OIDC 지원 필드
+    // ----------------------------------------------------------------
+
+    it('should have passwordHash field as nullable (String?)', () => {
+      // passwordHash는 OIDC 전용 사용자는 비밀번호가 없으므로 nullable이어야 한다
+      const userModelMatch = schemaContent.match(/model User \{([^}]+)\}/s);
+      expect(userModelMatch).not.toBeNull();
+      // "String?" 타입이어야 하며, "String " (non-nullable) 이어서는 안 된다
+      expect(userModelMatch![1]).toMatch(/passwordHash\s+String\?/);
+    });
+
+    it('should have email field as nullable (String?)', () => {
+      // email은 OIDC id_token의 email claim을 저장하는 선택적 필드이다
+      const userModelMatch = schemaContent.match(/model User \{([^}]+)\}/s);
+      expect(userModelMatch).not.toBeNull();
+      expect(userModelMatch![1]).toContain('email');
+      expect(userModelMatch![1]).toMatch(/email\s+String\?/);
+    });
+
+    it('should have oidcSub field as nullable unique (String? @unique)', () => {
+      // oidcSub는 OIDC subject identifier로 auto-provisioning의 키이며 unique해야 한다
+      const userModelMatch = schemaContent.match(/model User \{([^}]+)\}/s);
+      expect(userModelMatch).not.toBeNull();
+      expect(userModelMatch![1]).toContain('oidcSub');
+      expect(userModelMatch![1]).toMatch(/oidcSub\s+String\?.*@unique|oidcSub\s+String\?/);
+      expect(userModelMatch![1]).toMatch(/oidcSub.*@unique|@unique.*oidcSub/);
+    });
   });
 
   // ----------------------------------------------------------------

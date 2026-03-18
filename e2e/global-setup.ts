@@ -1,6 +1,7 @@
 import { execSync } from 'child_process';
 import path from 'path';
 import fs from 'fs';
+import { startOidcMockServer } from './helpers/oidc-mock';
 
 /**
  * Playwright 글로벌 셋업 (모든 테스트 실행 전 1회)
@@ -17,7 +18,11 @@ const testDBPath = path.resolve(__dirname, '..', 'e2e-test.db');
 const testDBUrl = `file:${testDBPath}`;
 
 async function globalSetup(): Promise<void> {
-  console.log('\n[E2E Setup] 테스트용 DB 초기화 시작...');
+  console.log('\n[E2E Setup] OIDC Mock 서버 시작 중...');
+  await startOidcMockServer(9999);
+  console.log('[E2E Setup] OIDC Mock 서버 시작 완료');
+
+  console.log('[E2E Setup] 테스트용 DB 초기화 시작...');
 
   // 이전 테스트 DB가 남아 있으면 삭제
   if (fs.existsSync(testDBPath)) {
@@ -93,6 +98,17 @@ async function seedDatabase(databaseUrl: string): Promise<void> {
         username: 'test',
         passwordHash: testPasswordHash,
         displayName: 'Middleware Test User',
+      },
+    });
+
+    // OIDC 테스트 사용자 생성
+    await prisma.user.upsert({
+      where: { username: 'oidc-user' },
+      update: {},
+      create: {
+        username: 'oidc-user',
+        displayName: 'OIDC Test User',
+        oidcSub: 'test-oidc-sub-001',
       },
     });
 

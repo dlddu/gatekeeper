@@ -86,7 +86,7 @@ test.describe('GET /api/auth/oidc/authorize (OIDC 인증 시작)', () => {
     expect(setCookieHeader).toBeTruthy();
 
     // state 쿠키 존재 확인
-    const cookies = Array.isArray(setCookieHeader) ? setCookieHeader : [setCookieHeader];
+    const cookies = Array.isArray(setCookieHeader) ? setCookieHeader : setCookieHeader.split('\n');
     const stateCookie = cookies.find((c: string) => c.startsWith('oidc_state='));
     const nonceCookie = cookies.find((c: string) => c.startsWith('oidc_nonce='));
 

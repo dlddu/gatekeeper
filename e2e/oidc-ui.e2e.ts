@@ -5,7 +5,7 @@ import { loginAsAdmin } from './helpers/auth';
  * OIDC 로그인 UI 플로우 E2E 테스트
  *
  * DLD-798: 작업 4-1: [OIDC 로그인 UI] e2e 테스트 작성 (skipped)
- * DLD-799: 작업 4-2: [OIDC 로그인 UI] 구현 및 e2e 테스트 활성화 (후행 이슈)
+ * DLD-799: 작업 4-2: [OIDC 로그인 UI] 구현 및 e2e 테스트 활성화
  * 부모 이슈: DLD-791 (Gatekeeper — OIDC 로그인 (Authentik))
  *
  * 커버리지:
@@ -19,12 +19,9 @@ import { loginAsAdmin } from './helpers/auth';
  * - OIDC_ISSUER: http://localhost:9999
  * - OIDC_CLIENT_ID: test-client
  * - OIDC_REDIRECT_URI: http://localhost:3000/api/auth/oidc/callback
- *
- * TODO: DLD-799 구현 완료 후 test.describe.skip → test.describe 로 변경
  */
 
-// TODO: Activate when DLD-799 is implemented
-test.describe.skip('OIDC 로그인 UI 플로우', () => {
+test.describe('OIDC 로그인 UI 플로우', () => {
   test('/login 페이지에서 로그인 버튼 클릭 시 OIDC 인증을 거쳐 /requests에 도달한다 (happy path)', async ({
     page,
   }) => {

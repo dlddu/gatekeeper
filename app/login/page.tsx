@@ -1,14 +1,14 @@
 'use client';
 
-import { useEffect, useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { Suspense, useEffect, useState } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 
-export default function LoginPage() {
+function LoginPageInner() {
   const router = useRouter();
-  const [username, setUsername] = useState('');
-  const [password, setPassword] = useState('');
-  const [error, setError] = useState('');
+  const searchParams = useSearchParams();
   const [isLoading, setIsLoading] = useState(false);
+
+  const errorParam = searchParams.get('error');
 
   // 이미 인증된 경우 /requests로 리다이렉트
   useEffect(() => {
@@ -18,79 +18,119 @@ export default function LoginPage() {
     }
   }, [router]);
 
-  async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
-    e.preventDefault();
+  function handleLogin() {
     setIsLoading(true);
-    setError('');
-
-    try {
-      const response = await fetch('/api/auth/login', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ username, password }),
-      });
-
-      if (response.ok) {
-        const data = await response.json();
-        localStorage.setItem('token', data.token);
-        router.push('/requests');
-        return; // 성공 시 isLoading 해제하지 않음 (페이지 이동 중 버튼이 disabled 유지)
-      } else {
-        setError('아이디 또는 비밀번호가 올바르지 않습니다');
-      }
-    } catch {
-      setError('아이디 또는 비밀번호가 올바르지 않습니다');
-    }
-    setIsLoading(false);
+    window.location.href = '/api/auth/oidc/authorize';
   }
 
   return (
-    <div>
-      <h1>Gatekeeper</h1>
-      <form onSubmit={handleSubmit}>
-        <div>
-          <label htmlFor="username">아이디</label>
-          <input
-            id="username"
-            type="text"
-            value={username}
-            onChange={(e) => setUsername(e.target.value)}
-            autoComplete="username"
-          />
+    <div
+      className="min-h-screen bg-gray-50 flex items-center justify-center"
+      style={{
+        minHeight: '100vh',
+        backgroundColor: '#f9fafb',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+      }}
+    >
+      <div
+        className="bg-white rounded-2xl shadow-md p-8 w-full max-w-sm"
+        style={{
+          backgroundColor: '#ffffff',
+          borderRadius: '1rem',
+          boxShadow: '0 4px 24px rgba(0,0,0,0.08)',
+          padding: '2rem',
+          width: '100%',
+          maxWidth: '24rem',
+        }}
+      >
+        <div style={{ textAlign: 'center', marginBottom: '1.5rem' }}>
+          <h1
+            className="text-2xl font-bold text-gray-900"
+            style={{ fontSize: '1.5rem', fontWeight: 700, color: '#111827', marginBottom: '0.25rem' }}
+          >
+            Gatekeeper
+          </h1>
+          <p
+            className="text-sm text-gray-500"
+            style={{ fontSize: '0.875rem', color: '#6b7280' }}
+          >
+            승인 게이트웨이 서비스
+          </p>
         </div>
-        <div>
-          <label htmlFor="password">비밀번호</label>
-          <input
-            id="password"
-            type="password"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            autoComplete="current-password"
-          />
-        </div>
-        {error && <p role="alert">{error}</p>}
-        <button type="submit" name="로그인" aria-label="로그인" disabled={isLoading}>
+
+        {errorParam && (
+          <div
+            className="bg-red-50 border border-red-200 rounded-lg px-4 py-3 mb-4"
+            style={{
+              backgroundColor: '#fef2f2',
+              border: '1px solid #fecaca',
+              borderRadius: '0.5rem',
+              padding: '0.75rem 1rem',
+              marginBottom: '1rem',
+            }}
+            role="alert"
+          >
+            <p
+              className="text-sm text-red-600"
+              style={{ fontSize: '0.875rem', color: '#dc2626' }}
+            >
+              로그인에 실패했습니다. 다시 시도해 주세요.
+            </p>
+          </div>
+        )}
+
+        <button
+          onClick={handleLogin}
+          disabled={isLoading}
+          className="w-full bg-gray-900 text-white rounded-xl py-3 font-medium flex items-center justify-center gap-2"
+          style={{
+            width: '100%',
+            backgroundColor: isLoading ? '#4b5563' : '#111827',
+            color: '#ffffff',
+            borderRadius: '0.75rem',
+            padding: '0.75rem 1rem',
+            fontWeight: 500,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            gap: '0.5rem',
+            border: 'none',
+            cursor: isLoading ? 'not-allowed' : 'pointer',
+          }}
+        >
           {isLoading ? (
-            <span aria-label="로딩 중">
+            <>
               <svg
                 aria-hidden="true"
-                width="16"
-                height="16"
+                width="18"
+                height="18"
                 viewBox="0 0 24 24"
                 fill="none"
                 stroke="currentColor"
                 strokeWidth="2"
-                style={{ animation: 'spin 1s linear infinite', display: 'inline-block' }}
+                className="animate-spin"
+                style={{ animation: 'spin 1s linear infinite' }}
               >
                 <circle cx="12" cy="12" r="10" strokeOpacity="0.25" />
                 <path d="M12 2a10 10 0 0 1 10 10" />
               </svg>
-            </span>
+              로그인 중...
+            </>
           ) : (
             '로그인'
           )}
         </button>
-      </form>
+      </div>
     </div>
+  );
+}
+
+export default function LoginPage() {
+  return (
+    <Suspense>
+      <LoginPageInner />
+    </Suspense>
   );
 }

@@ -1,20 +1,25 @@
 'use client';
 
-import { Suspense, useEffect, useState } from 'react';
+import { Suspense, useEffect, useRef, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 
 function LoginCallbackInner() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [isError, setIsError] = useState(false);
+  const processed = useRef(false);
 
   useEffect(() => {
+    if (processed.current) return;
+    processed.current = true;
+
     const token = searchParams.get('token');
     const error = searchParams.get('error');
 
     const hasError = !!(error || !token || token.length === 0);
     if (hasError) {
-      setIsError(true);
+      // Use a microtask to defer the setState call out of the synchronous effect body
+      Promise.resolve().then(() => setIsError(true));
       return;
     }
 

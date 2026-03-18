@@ -91,6 +91,49 @@ describe('k8s/ directory', () => {
       expect(content).toContain('persistentVolumeClaim');
     });
 
+    describe('OIDC environment variables via secretKeyRef', () => {
+      it('should reference OIDC_ISSUER secret', () => {
+        expect(content).toContain('OIDC_ISSUER');
+      });
+
+      it('should reference OIDC_CLIENT_ID secret', () => {
+        expect(content).toContain('OIDC_CLIENT_ID');
+      });
+
+      it('should reference OIDC_CLIENT_SECRET secret', () => {
+        expect(content).toContain('OIDC_CLIENT_SECRET');
+      });
+
+      it('should reference OIDC_REDIRECT_URI secret', () => {
+        expect(content).toContain('OIDC_REDIRECT_URI');
+      });
+
+      it('should inject OIDC_ISSUER via secretKeyRef from gatekeeper-secrets', () => {
+        // name: OIDC_ISSUER 바로 다음에 secretKeyRef 블록이 와야 함
+        expect(content).toMatch(
+          /name:\s+OIDC_ISSUER[\s\S]*?secretKeyRef:\s*\n\s*name:\s+gatekeeper-secrets[\s\S]*?key:\s+OIDC_ISSUER/
+        );
+      });
+
+      it('should inject OIDC_CLIENT_ID via secretKeyRef from gatekeeper-secrets', () => {
+        expect(content).toMatch(
+          /name:\s+OIDC_CLIENT_ID[\s\S]*?secretKeyRef:\s*\n\s*name:\s+gatekeeper-secrets[\s\S]*?key:\s+OIDC_CLIENT_ID/
+        );
+      });
+
+      it('should inject OIDC_CLIENT_SECRET via secretKeyRef from gatekeeper-secrets', () => {
+        expect(content).toMatch(
+          /name:\s+OIDC_CLIENT_SECRET[\s\S]*?secretKeyRef:\s*\n\s*name:\s+gatekeeper-secrets[\s\S]*?key:\s+OIDC_CLIENT_SECRET/
+        );
+      });
+
+      it('should inject OIDC_REDIRECT_URI via secretKeyRef from gatekeeper-secrets', () => {
+        expect(content).toMatch(
+          /name:\s+OIDC_REDIRECT_URI[\s\S]*?secretKeyRef:\s*\n\s*name:\s+gatekeeper-secrets[\s\S]*?key:\s+OIDC_REDIRECT_URI/
+        );
+      });
+    });
+
   });
 
   // ----------------------------------------------------------------
@@ -156,6 +199,57 @@ describe('k8s/ directory', () => {
 
     it('should be labeled for gatekeeper app', () => {
       expect(content).toContain('app: gatekeeper');
+    });
+  });
+});
+
+// ----------------------------------------------------------------
+// playwright.config.ts - webServer.env 검증
+// ----------------------------------------------------------------
+describe('playwright.config.ts', () => {
+  const PLAYWRIGHT_CONFIG_PATH = path.join(process.cwd(), 'playwright.config.ts');
+  let content: string;
+
+  beforeAll(() => {
+    content = fs.readFileSync(PLAYWRIGHT_CONFIG_PATH, 'utf-8');
+  });
+
+  it('should exist at project root', () => {
+    expect(fs.existsSync(PLAYWRIGHT_CONFIG_PATH)).toBe(true);
+  });
+
+  describe('webServer.env OIDC test variables', () => {
+    it('should define OIDC_ISSUER in webServer.env', () => {
+      expect(content).toContain('OIDC_ISSUER');
+    });
+
+    it('should define OIDC_CLIENT_ID in webServer.env', () => {
+      expect(content).toContain('OIDC_CLIENT_ID');
+    });
+
+    it('should define OIDC_CLIENT_SECRET in webServer.env', () => {
+      expect(content).toContain('OIDC_CLIENT_SECRET');
+    });
+
+    it('should define OIDC_REDIRECT_URI in webServer.env', () => {
+      expect(content).toContain('OIDC_REDIRECT_URI');
+    });
+
+    it('should set OIDC_ISSUER as a key-value pair inside webServer.env block', () => {
+      // webServer 블록 안에서 OIDC_ISSUER: '...' 형태로 존재해야 함
+      expect(content).toMatch(/webServer[\s\S]*?env[\s\S]*?OIDC_ISSUER\s*:/);
+    });
+
+    it('should set OIDC_CLIENT_ID as a key-value pair inside webServer.env block', () => {
+      expect(content).toMatch(/webServer[\s\S]*?env[\s\S]*?OIDC_CLIENT_ID\s*:/);
+    });
+
+    it('should set OIDC_CLIENT_SECRET as a key-value pair inside webServer.env block', () => {
+      expect(content).toMatch(/webServer[\s\S]*?env[\s\S]*?OIDC_CLIENT_SECRET\s*:/);
+    });
+
+    it('should set OIDC_REDIRECT_URI as a key-value pair inside webServer.env block', () => {
+      expect(content).toMatch(/webServer[\s\S]*?env[\s\S]*?OIDC_REDIRECT_URI\s*:/);
     });
   });
 });

@@ -1,9 +1,9 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { Suspense, useEffect, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 
-export default function LoginCallbackPage() {
+function LoginCallbackInner() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [isError, setIsError] = useState(false);
@@ -12,7 +12,8 @@ export default function LoginCallbackPage() {
     const token = searchParams.get('token');
     const error = searchParams.get('error');
 
-    if (error || !token || token.length === 0) {
+    const hasError = !!(error || !token || token.length === 0);
+    if (hasError) {
       setIsError(true);
       return;
     }
@@ -124,5 +125,13 @@ export default function LoginCallbackPage() {
         </div>
       </div>
     </div>
+  );
+}
+
+export default function LoginCallbackPage() {
+  return (
+    <Suspense>
+      <LoginCallbackInner />
+    </Suspense>
   );
 }

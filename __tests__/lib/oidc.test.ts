@@ -13,6 +13,7 @@ import {
   buildAuthorizationURL,
   exchangeCode,
   verifyIdToken,
+  clearDiscoveryCache,
 } from '@/lib/oidc';
 
 // ----------------------------------------------------------------
@@ -62,12 +63,12 @@ function clearOidcEnv() {
  * global.fetch를 성공 응답으로 mock합니다.
  */
 function mockFetchSuccess(body: unknown, status = 200) {
-  (global.fetch as jest.Mock).mockResolvedValueOnce({
-    ok: status >= 200 && status < 300,
-    status,
-    json: async () => body,
-    text: async () => JSON.stringify(body),
-  });
+  (global.fetch as jest.Mock).mockResolvedValueOnce(
+    new Response(JSON.stringify(body), {
+      status,
+      headers: { 'Content-Type': 'application/json' },
+    })
+  );
 }
 
 /**
@@ -81,12 +82,12 @@ function mockFetchNetworkError(message = 'Network Error') {
  * global.fetch를 HTTP 오류 응답으로 mock합니다.
  */
 function mockFetchHttpError(status: number, body: unknown = { error: 'error' }) {
-  (global.fetch as jest.Mock).mockResolvedValueOnce({
-    ok: false,
-    status,
-    json: async () => body,
-    text: async () => JSON.stringify(body),
-  });
+  (global.fetch as jest.Mock).mockResolvedValueOnce(
+    new Response(JSON.stringify(body), {
+      status,
+      headers: { 'Content-Type': 'application/json' },
+    })
+  );
 }
 
 // ----------------------------------------------------------------
@@ -98,8 +99,7 @@ describe('discoverOIDC', () => {
     setOidcEnv();
     // global.fetch를 jest.fn()으로 교체
     global.fetch = jest.fn();
-    // 모듈 내부 캐시를 초기화하기 위해 모듈을 재설정
-    jest.resetModules();
+    clearDiscoveryCache();
   });
 
   afterEach(() => {
@@ -210,6 +210,7 @@ describe('buildAuthorizationURL', () => {
   beforeEach(() => {
     setOidcEnv();
     global.fetch = jest.fn();
+    clearDiscoveryCache();
     // discoverOIDC 호출 시 항상 MOCK_OIDC_CONFIG 반환
     mockFetchSuccess(MOCK_OIDC_CONFIG);
   });
@@ -358,6 +359,7 @@ describe('exchangeCode', () => {
   beforeEach(() => {
     setOidcEnv();
     global.fetch = jest.fn();
+    clearDiscoveryCache();
     // 첫 번째 fetch: discoverOIDC
     mockFetchSuccess(MOCK_OIDC_CONFIG);
   });
@@ -582,6 +584,7 @@ describe('verifyIdToken', () => {
   beforeEach(() => {
     setOidcEnv();
     global.fetch = jest.fn();
+    clearDiscoveryCache();
   });
 
   afterEach(() => {

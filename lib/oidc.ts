@@ -9,6 +9,10 @@ export interface OIDCConfig {
 
 const discoveryCache = new Map<string, OIDCConfig>();
 
+export function clearDiscoveryCache(): void {
+  discoveryCache.clear();
+}
+
 export async function discoverOIDC(issuer: string): Promise<OIDCConfig> {
   const cached = discoveryCache.get(issuer);
   if (cached) {

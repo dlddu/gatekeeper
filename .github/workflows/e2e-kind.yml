@@ -40,7 +40,11 @@ jobs:
             --from-literal=VAPID_PUBLIC_KEY='BEl62iUYgUivxIkv69yViEuiBIa-Ib9-SkvMeAtA3LFgDzkrxZJjSgSnfckjBJuBkr3qBUYIHBQFLXYp5Nksh8U' \
             --from-literal=VAPID_PRIVATE_KEY='UUxI4O8-HoGs86_GBRhFxGMpHMTKJmEXAZMFnTa5YCc' \
             --from-literal=API_SECRET_KEY='e2e-test-api-key-valid' \
-            --from-literal=VAPID_SUBJECT='mailto:e2e-test@example.com'
+            --from-literal=VAPID_SUBJECT='mailto:e2e-test@example.com' \
+            --from-literal=OIDC_ISSUER='http://localhost:9999' \
+            --from-literal=OIDC_CLIENT_ID='test-client' \
+            --from-literal=OIDC_CLIENT_SECRET='test-secret' \
+            --from-literal=OIDC_REDIRECT_URI='http://localhost:3000/api/auth/oidc/callback'
 
       # K8s 매니페스트 배포 (이미지를 로컬 빌드로 교체)
       - name: Deploy to Kind cluster

@@ -60,6 +60,26 @@ spec:
                 secretKeyRef:
                   name: gatekeeper-secrets
                   key: API_SECRET_KEY
+            - name: OIDC_ISSUER
+              valueFrom:
+                secretKeyRef:
+                  name: gatekeeper-secrets
+                  key: OIDC_ISSUER
+            - name: OIDC_CLIENT_ID
+              valueFrom:
+                secretKeyRef:
+                  name: gatekeeper-secrets
+                  key: OIDC_CLIENT_ID
+            - name: OIDC_CLIENT_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: gatekeeper-secrets
+                  key: OIDC_CLIENT_SECRET
+            - name: OIDC_REDIRECT_URI
+              valueFrom:
+                secretKeyRef:
+                  name: gatekeeper-secrets
+                  key: OIDC_REDIRECT_URI
           volumeMounts:
             - name: data
               mountPath: /app/data

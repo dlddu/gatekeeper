@@ -24,6 +24,13 @@ export async function POST(request: NextRequest): Promise<Response> {
     });
   }
 
+  // OIDC 전용 사용자(passwordHash 없음) → 401
+  if (!user.passwordHash) {
+    return new Response(JSON.stringify({ error: 'Invalid credentials' }), {
+      status: 401,
+    });
+  }
+
   // 비밀번호 검증
   const isPasswordValid = await bcrypt.compare(password, user.passwordHash);
 

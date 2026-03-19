@@ -127,8 +127,8 @@ jobs:
       - name: Seed admin user for E2E tests
         run: |
           POD=$(kubectl get pod -l app=gatekeeper -o jsonpath='{.items[0].metadata.name}')
-          kubectl cp e2e/seed-admin.js $POD:/app/seed-admin.js
-          kubectl exec $POD -- node /app/seed-admin.js
+          kubectl cp e2e/seed-admin.js $POD:/tmp/seed-admin.js
+          kubectl exec $POD -- node /tmp/seed-admin.js
 
       # Node.js 및 Playwright 설정
       - uses: actions/setup-node@v4

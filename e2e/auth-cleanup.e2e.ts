@@ -13,14 +13,10 @@ import { TEST_USERS } from './helpers/auth';
  * - POST /api/auth/login 기존 동작 유지 확인 (200 + JWT)
  * - POST /api/auth/login OIDC 전용 사용자 차단 확인 (401)
  * - /api/auth/signup publicPaths 제거 확인 (미들웨어 간접 검증)
- *
- * TODO: DLD-801 구현 완료 후 test.describe.skip → test.describe 로 변경
  */
 
-// TODO: Activate when DLD-801 is implemented
-test.describe.skip('POST /api/auth/signup 제거 확인', () => {
+test.describe('POST /api/auth/signup 제거 확인', () => {
   test('signup 엔드포인트가 제거되어 404를 반환한다 (happy path)', async ({ request }) => {
-    // 구현 전 - DLD-801에서 활성화 예정
     // Act: signup 엔드포인트 호출
     const response = await request.post('/api/auth/signup', {
       data: {
@@ -35,12 +31,10 @@ test.describe.skip('POST /api/auth/signup 제거 확인', () => {
   });
 });
 
-// TODO: Activate when DLD-801 is implemented
-test.describe.skip('POST /api/auth/login 기존 동작 유지 확인', () => {
+test.describe('POST /api/auth/login 기존 동작 유지 확인', () => {
   test('올바른 자격증명으로 로그인하면 200과 JWT 토큰을 반환한다 (happy path)', async ({
     request,
   }) => {
-    // 구현 전 - DLD-801에서 활성화 예정
     // Act: 기존 password 사용자로 로그인
     const response = await request.post('/api/auth/login', {
       data: {
@@ -61,12 +55,10 @@ test.describe.skip('POST /api/auth/login 기존 동작 유지 확인', () => {
   });
 });
 
-// TODO: Activate when DLD-801 is implemented
-test.describe.skip('POST /api/auth/login OIDC 전용 사용자 차단 확인', () => {
+test.describe('POST /api/auth/login OIDC 전용 사용자 차단 확인', () => {
   test('passwordHash가 없는 OIDC 전용 사용자로 로그인 시도하면 401을 반환한다 (error case)', async ({
     request,
   }) => {
-    // 구현 전 - DLD-801에서 활성화 예정
     // Arrange: global-setup.ts에서 시드된 OIDC 전용 사용자 (passwordHash 없음)
     // oidc-user: { username: 'oidc-user', oidcSub: 'test-oidc-sub-001', passwordHash: null }
 
@@ -86,12 +78,10 @@ test.describe.skip('POST /api/auth/login OIDC 전용 사용자 차단 확인', (
   });
 });
 
-// TODO: Activate when DLD-801 is implemented
-test.describe.skip('/api/auth/signup publicPaths 제거 확인 (미들웨어)', () => {
+test.describe('/api/auth/signup publicPaths 제거 확인 (미들웨어)', () => {
   test('/api/auth/signup가 publicPaths에서 제거되어 404를 반환한다 (edge case)', async ({
     request,
   }) => {
-    // 구현 전 - DLD-801에서 활성화 예정
     //
     // 검증 의도:
     // signup 엔드포인트가 제거된 후, /api/auth/signup 경로는 존재하지 않으므로

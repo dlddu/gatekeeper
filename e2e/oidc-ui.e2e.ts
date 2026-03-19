@@ -18,7 +18,7 @@ import { loginAsAdmin } from './helpers/auth';
  * - OIDC Mock 서버: http://localhost:9999 (global-setup.ts에서 기동)
  * - OIDC_ISSUER: http://localhost:9999
  * - OIDC_CLIENT_ID: test-client
- * - OIDC_REDIRECT_URI: http://localhost:3000/api/auth/oidc/callback
+ * - OIDC_REDIRECT_URI: http://localhost:3001/api/auth/oidc/callback
  *
  * TODO: DLD-799 구현 완료 후 test.describe.skip → test.describe 로 변경
  */

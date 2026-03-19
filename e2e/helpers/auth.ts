@@ -1,4 +1,4 @@
-import { type APIRequestContext } from '@playwright/test';
+import { type Page, type APIRequestContext } from '@playwright/test';
 
 /**
  * E2E 테스트용 인증 헬퍼
@@ -85,4 +85,22 @@ export async function loginAsAdmin(request: APIRequestContext): Promise<AuthToke
  */
 export async function loginAsTestUser(request: APIRequestContext): Promise<AuthToken> {
   return login(request, TEST_USERS.user);
+}
+
+/**
+ * 브라우저에서 프로그래매틱하게 로그인 (API 토큰 + localStorage)
+ * OIDC 로그인 UI 전환 후 UI 로그인 대신 사용
+ */
+export async function loginViaAPI(
+  page: Page,
+  request: APIRequestContext,
+  credentials: LoginCredentials = TEST_USERS.admin
+): Promise<AuthToken> {
+  const authToken = await login(request, credentials);
+  // 도메인 접근을 위해 페이지에 먼저 방문
+  await page.goto('/login');
+  await page.evaluate((token) => {
+    localStorage.setItem('token', token);
+  }, authToken.token);
+  return authToken;
 }

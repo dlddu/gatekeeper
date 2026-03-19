@@ -1,5 +1,5 @@
 import { test, expect, type Page } from '@playwright/test';
-import { TEST_USERS } from './helpers/auth';
+import { loginViaAPI } from './helpers/auth';
 import {
   cleanupPushSubscriptions,
   createTestPushSubscription,
@@ -172,13 +172,9 @@ async function mockBrowserPushAPIsInline(
 }
 
 test.describe('설정 페이지 Push 알림 토글 (/settings)', () => {
-  test.beforeEach(async ({ page }) => {
-    // 관리자 로그인 (UI 기반)
-    await page.goto('/login');
-    await page.getByLabel('아이디').fill(TEST_USERS.admin.username);
-    await page.getByLabel('비밀번호').fill(TEST_USERS.admin.password);
-    await page.getByRole('button', { name: '로그인' }).click();
-    await expect(page).toHaveURL('/requests');
+  test.beforeEach(async ({ page, request }) => {
+    await loginViaAPI(page, request);
+    await page.goto('/requests');
   });
 
   test.afterEach(async () => {

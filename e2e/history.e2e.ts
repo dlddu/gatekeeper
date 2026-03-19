@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test';
-import { TEST_USERS } from './helpers/auth';
+import { loginViaAPI } from './helpers/auth';
 import {
   cleanupTestData,
   createTestRequest,
@@ -30,13 +30,9 @@ import {
 test.describe('처리 이력 화면 (/history)', () => {
   const createdExternalIds: string[] = [];
 
-  test.beforeEach(async ({ page }) => {
-    // 관리자 로그인 (UI 기반)
-    await page.goto('/login');
-    await page.getByLabel('아이디').fill(TEST_USERS.admin.username);
-    await page.getByLabel('비밀번호').fill(TEST_USERS.admin.password);
-    await page.getByRole('button', { name: '로그인' }).click();
-    await expect(page).toHaveURL('/requests');
+  test.beforeEach(async ({ page, request }) => {
+    await loginViaAPI(page, request);
+    await page.goto('/requests');
   });
 
   test.afterAll(async () => {

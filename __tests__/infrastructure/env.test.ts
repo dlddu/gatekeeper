@@ -35,8 +35,8 @@ describe('.env.example', () => {
       expect(envKeys).toContain('DATABASE_URL');
     });
 
-    it('should contain JWT_SECRET', () => {
-      expect(envKeys).toContain('JWT_SECRET');
+    it('should NOT contain JWT_SECRET (removed in Forward Auth migration)', () => {
+      expect(envKeys).not.toContain('JWT_SECRET');
     });
 
     it('should contain VAPID_PUBLIC_KEY', () => {

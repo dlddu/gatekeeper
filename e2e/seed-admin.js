@@ -8,9 +8,7 @@
 const { createClient } = require('@libsql/client');
 
 const ADMIN_USERNAME = process.env.ADMIN_USERNAME || 'admin';
-const ADMIN_PASSWORD_HASH = process.env.ADMIN_PASSWORD_HASH
-  // Pre-computed bcrypt hash of 'adminpass123' (10 rounds)
-  || '$2b$10$mH3ln54bjUEP.RzPZSUqeevObHNCbiIIes1QjBcq0p3LPZ6qIEBJC';
+const ADMIN_AUTHENTIK_UID = process.env.ADMIN_AUTHENTIK_UID || 'seed-admin-authentik-uid';
 
 const url = process.env.DATABASE_URL || 'file:./dev.db';
 const client = createClient({ url });
@@ -19,8 +17,8 @@ async function seed() {
   try {
     const now = new Date().toISOString();
     const result = await client.execute({
-      sql: 'INSERT OR IGNORE INTO User (id, username, passwordHash, displayName, createdAt, updatedAt) VALUES (?, ?, ?, ?, ?, ?)',
-      args: ['seed-admin-001', ADMIN_USERNAME, ADMIN_PASSWORD_HASH, 'Admin User', now, now]
+      sql: 'INSERT OR IGNORE INTO User (id, username, authentikUid, displayName, createdAt, updatedAt) VALUES (?, ?, ?, ?, ?, ?)',
+      args: ['seed-admin-001', ADMIN_USERNAME, ADMIN_AUTHENTIK_UID, 'Admin User', now, now]
     });
     console.log(`[seed] Admin user seeded (rows affected: ${result.rowsAffected})`);
   } catch (error) {

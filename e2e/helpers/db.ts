@@ -54,18 +54,16 @@ export async function createTestPrismaClient() {
  */
 export async function createTestUser(params: {
   username: string;
-  password: string;
+  authentikUid: string;
   displayName: string;
 }): Promise<TestUser> {
   const prisma = await createTestPrismaClient();
-  const bcrypt = await import('bcryptjs');
 
   try {
-    const passwordHash = await bcrypt.hash(params.password, 10);
     const user = await prisma.user.create({
       data: {
         username: params.username,
-        passwordHash,
+        authentikUid: params.authentikUid,
         displayName: params.displayName,
       },
       select: { id: true, username: true, displayName: true },

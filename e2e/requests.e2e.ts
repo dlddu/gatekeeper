@@ -256,13 +256,13 @@ test.describe('PATCH /api/requests/:id/approve (승인)', () => {
     expect(createResponse.status()).toBe(201);
     const created = await createResponse.json();
 
-    // JWT 토큰 획득
+    // Forward Auth 헤더 획득
     const auth = await loginAsAdmin(request);
 
     // Act: 승인 요청
     const approveResponse = await request.patch(
       `/api/requests/${created.id}/approve`,
-      withAuthHeader(auth.token)
+      withAuthHeader(auth.authentikUid)
     );
 
     // Assert
@@ -290,12 +290,12 @@ test.describe('PATCH /api/requests/:id/approve (승인)', () => {
     const created = await createResponse.json();
     const auth = await loginAsAdmin(request);
 
-    await request.patch(`/api/requests/${created.id}/approve`, withAuthHeader(auth.token));
+    await request.patch(`/api/requests/${created.id}/approve`, withAuthHeader(auth.authentikUid));
 
     // Act: 다시 승인 시도
     const response = await request.patch(
       `/api/requests/${created.id}/approve`,
-      withAuthHeader(auth.token)
+      withAuthHeader(auth.authentikUid)
     );
 
     // Assert
@@ -318,11 +318,11 @@ test.describe('PATCH /api/requests/:id/approve (승인)', () => {
   });
 
   test('존재하지 않는 요청 ID로 승인하면 404를 반환한다 (error case)', async ({ request }) => {
-    const { token } = await loginAsAdmin(request);
+    const { authentikUid } = await loginAsAdmin(request);
 
     const response = await request.patch(
       '/api/requests/nonexistent-id-000/approve',
-      withAuthHeader(token)
+      withAuthHeader(authentikUid)
     );
 
     expect(response.status()).toBe(404);
@@ -355,13 +355,13 @@ test.describe('PATCH /api/requests/:id/reject (거절)', () => {
     expect(createResponse.status()).toBe(201);
     const created = await createResponse.json();
 
-    // JWT 토큰 획득
+    // Forward Auth 헤더 획득
     const auth = await loginAsAdmin(request);
 
     // Act: 거절 요청
     const rejectResponse = await request.patch(
       `/api/requests/${created.id}/reject`,
-      withAuthHeader(auth.token)
+      withAuthHeader(auth.authentikUid)
     );
 
     // Assert
@@ -389,12 +389,12 @@ test.describe('PATCH /api/requests/:id/reject (거절)', () => {
     const created = await createResponse.json();
     const auth = await loginAsAdmin(request);
 
-    await request.patch(`/api/requests/${created.id}/reject`, withAuthHeader(auth.token));
+    await request.patch(`/api/requests/${created.id}/reject`, withAuthHeader(auth.authentikUid));
 
     // Act: 다시 거절 시도
     const response = await request.patch(
       `/api/requests/${created.id}/reject`,
-      withAuthHeader(auth.token)
+      withAuthHeader(auth.authentikUid)
     );
 
     // Assert

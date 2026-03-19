@@ -24,10 +24,10 @@ import { setupPushMocks, mockPushSubscriptionRoutes, MOCK_PUSH_SUBSCRIPTION } fr
 
 test.describe('POST /api/me/push/subscribe (Push 구독 API)', () => {
   test('유효한 구독 정보로 등록하면 201을 반환한다 (happy path)', async ({ request }) => {
-    const { token } = await loginAsAdmin(request);
+    const { authentikUid } = await loginAsAdmin(request);
 
     const response = await request.post('/api/me/push/subscribe', {
-      ...withAuthHeader(token),
+      ...withAuthHeader(authentikUid),
       data: {
         endpoint: MOCK_PUSH_SUBSCRIPTION.endpoint,
         p256dh: MOCK_PUSH_SUBSCRIPTION.keys.p256dh,
@@ -45,11 +45,11 @@ test.describe('POST /api/me/push/subscribe (Push 구독 API)', () => {
   test('동일한 endpoint로 중복 구독하면 기존 구독을 반환하거나 200을 반환한다 (edge case)', async ({
     request,
   }) => {
-    const { token } = await loginAsAdmin(request);
+    const { authentikUid } = await loginAsAdmin(request);
 
     // 첫 번째 구독
     await request.post('/api/me/push/subscribe', {
-      ...withAuthHeader(token),
+      ...withAuthHeader(authentikUid),
       data: {
         endpoint: MOCK_PUSH_SUBSCRIPTION.endpoint,
         p256dh: MOCK_PUSH_SUBSCRIPTION.keys.p256dh,
@@ -59,7 +59,7 @@ test.describe('POST /api/me/push/subscribe (Push 구독 API)', () => {
 
     // 두 번째 구독 (동일 endpoint)
     const response = await request.post('/api/me/push/subscribe', {
-      ...withAuthHeader(token),
+      ...withAuthHeader(authentikUid),
       data: {
         endpoint: MOCK_PUSH_SUBSCRIPTION.endpoint,
         p256dh: MOCK_PUSH_SUBSCRIPTION.keys.p256dh,
@@ -84,10 +84,10 @@ test.describe('POST /api/me/push/subscribe (Push 구독 API)', () => {
   });
 
   test('endpoint 없이 구독 등록하면 400을 반환한다 (error case)', async ({ request }) => {
-    const { token } = await loginAsAdmin(request);
+    const { authentikUid } = await loginAsAdmin(request);
 
     const response = await request.post('/api/me/push/subscribe', {
-      ...withAuthHeader(token),
+      ...withAuthHeader(authentikUid),
       data: {
         p256dh: MOCK_PUSH_SUBSCRIPTION.keys.p256dh,
         auth: MOCK_PUSH_SUBSCRIPTION.keys.auth,
@@ -98,10 +98,10 @@ test.describe('POST /api/me/push/subscribe (Push 구독 API)', () => {
   });
 
   test('p256dh 없이 구독 등록하면 400을 반환한다 (error case)', async ({ request }) => {
-    const { token } = await loginAsAdmin(request);
+    const { authentikUid } = await loginAsAdmin(request);
 
     const response = await request.post('/api/me/push/subscribe', {
-      ...withAuthHeader(token),
+      ...withAuthHeader(authentikUid),
       data: {
         endpoint: MOCK_PUSH_SUBSCRIPTION.endpoint,
         auth: MOCK_PUSH_SUBSCRIPTION.keys.auth,
@@ -112,10 +112,10 @@ test.describe('POST /api/me/push/subscribe (Push 구독 API)', () => {
   });
 
   test('auth 없이 구독 등록하면 400을 반환한다 (error case)', async ({ request }) => {
-    const { token } = await loginAsAdmin(request);
+    const { authentikUid } = await loginAsAdmin(request);
 
     const response = await request.post('/api/me/push/subscribe', {
-      ...withAuthHeader(token),
+      ...withAuthHeader(authentikUid),
       data: {
         endpoint: MOCK_PUSH_SUBSCRIPTION.endpoint,
         p256dh: MOCK_PUSH_SUBSCRIPTION.keys.p256dh,
@@ -128,11 +128,11 @@ test.describe('POST /api/me/push/subscribe (Push 구독 API)', () => {
 
 test.describe('DELETE /api/me/push/unsubscribe (Push 구독 해제)', () => {
   test('등록된 구독을 해제하면 200을 반환한다 (happy path)', async ({ request }) => {
-    const { token } = await loginAsAdmin(request);
+    const { authentikUid } = await loginAsAdmin(request);
 
     // 먼저 구독 등록
     await request.post('/api/me/push/subscribe', {
-      ...withAuthHeader(token),
+      ...withAuthHeader(authentikUid),
       data: {
         endpoint: `${MOCK_PUSH_SUBSCRIPTION.endpoint}-for-unsub`,
         p256dh: MOCK_PUSH_SUBSCRIPTION.keys.p256dh,
@@ -142,7 +142,7 @@ test.describe('DELETE /api/me/push/unsubscribe (Push 구독 해제)', () => {
 
     // 구독 해제
     const response = await request.delete('/api/me/push/unsubscribe', {
-      ...withAuthHeader(token),
+      ...withAuthHeader(authentikUid),
       data: { endpoint: `${MOCK_PUSH_SUBSCRIPTION.endpoint}-for-unsub` },
     });
 
@@ -158,10 +158,10 @@ test.describe('DELETE /api/me/push/unsubscribe (Push 구독 해제)', () => {
   });
 
   test('존재하지 않는 endpoint로 해제하면 404를 반환한다 (edge case)', async ({ request }) => {
-    const { token } = await loginAsAdmin(request);
+    const { authentikUid } = await loginAsAdmin(request);
 
     const response = await request.delete('/api/me/push/unsubscribe', {
-      ...withAuthHeader(token),
+      ...withAuthHeader(authentikUid),
       data: { endpoint: 'https://nonexistent.endpoint.example.com/push' },
     });
 

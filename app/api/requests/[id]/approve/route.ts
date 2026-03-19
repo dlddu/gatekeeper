@@ -1,27 +1,24 @@
 import { NextRequest } from 'next/server';
 import { prisma } from '@/lib/prisma';
-import { verifyToken } from '@/lib/auth';
 
 export async function PATCH(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ): Promise<Response> {
-  // JWT 인증
-  const authHeader = request.headers.get('Authorization');
-  if (!authHeader || !authHeader.startsWith('Bearer ')) {
+  // Forward Auth: x-authentik-uid 헤더에서 사용자 식별
+  const authentikUid = request.headers.get('x-authentik-uid');
+
+  if (!authentikUid) {
     return new Response(JSON.stringify({ error: 'Unauthorized' }), {
       status: 401,
       headers: { 'Content-Type': 'application/json' },
     });
   }
 
-  const token = authHeader.slice(7);
-  let payload: { userId: string; username: string };
+  const user = await prisma.user.findUnique({ where: { authentikUid } });
 
-  try {
-    payload = await verifyToken(token);
-  } catch {
-    return new Response(JSON.stringify({ error: 'Invalid or expired token' }), {
+  if (!user) {
+    return new Response(JSON.stringify({ error: 'Unauthorized' }), {
       status: 401,
       headers: { 'Content-Type': 'application/json' },
     });
@@ -50,7 +47,7 @@ export async function PATCH(
     data: {
       status: 'APPROVED',
       processedAt: new Date(),
-      processedById: payload.userId,
+      processedById: user.id,
     },
   });
 

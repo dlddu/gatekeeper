@@ -23,8 +23,7 @@ import { loginAsAdmin } from './helpers/auth';
  * TODO: DLD-799 구현 완료 후 test.describe.skip → test.describe 로 변경
  */
 
-// TODO: Activate when DLD-799 is implemented
-test.describe.skip('OIDC 로그인 UI 플로우', () => {
+test.describe('OIDC 로그인 UI 플로우', () => {
   test('/login 페이지에서 로그인 버튼 클릭 시 OIDC 인증을 거쳐 /requests에 도달한다 (happy path)', async ({
     page,
   }) => {

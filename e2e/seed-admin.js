@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-require-imports */
 /**
  * Admin 사용자 시드 스크립트
  * Kind E2E 테스트를 위해 admin 사용자를 데이터베이스에 생성합니다.

@@ -157,7 +157,7 @@ jobs:
       # 테스트용 admin 사용자 시드 (signup 제거 후 필요)
       - name: Seed test data
         run: |
-          kubectl exec deploy/gatekeeper -c gatekeeper -- sh -c 'npx prisma db execute --file prisma/seed.sql'
+          kubectl exec deploy/gatekeeper -c gatekeeper -- node prisma/seed-admin.js
 
       # Kind 클러스터에 배포된 앱에 대해 E2E 테스트 실행
       - name: Run E2E tests

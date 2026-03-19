@@ -1,4 +1,5 @@
 import { test, expect } from '@playwright/test';
+import { TEST_USERS, loginAsAdmin } from '../helpers/auth';
 
 /**
  * Kind 클러스터 배포 E2E 테스트
@@ -39,9 +40,12 @@ test.describe('헬스 체크', () => {
 });
 
 test.describe('회원가입 및 인증', () => {
-  const adminUsername = 'admin';
-  const adminPassword = 'adminpass123';
   let authToken: string;
+
+  test.beforeAll(async ({ request }) => {
+    const auth = await loginAsAdmin(request);
+    authToken = auth.token;
+  });
 
   test('POST /api/auth/signup 엔드포인트가 제거되었다 (404)', async ({ request }) => {
     const response = await request.post('/api/auth/signup', {
@@ -58,15 +62,14 @@ test.describe('회원가입 및 인증', () => {
   test('POST /api/auth/login 으로 로그인할 수 있다', async ({ request }) => {
     const response = await request.post('/api/auth/login', {
       data: {
-        username: adminUsername,
-        password: adminPassword,
+        username: TEST_USERS.admin.username,
+        password: TEST_USERS.admin.password,
       },
     });
     expect(response.status()).toBe(200);
 
     const body = await response.json();
     expect(body).toHaveProperty('token');
-    authToken = body.token;
   });
 
   test('인증된 사용자가 보호된 API에 접근할 수 있다', async ({ request }) => {
@@ -88,13 +91,8 @@ test.describe('요청(Request) CRUD', () => {
   const testExternalId = uniqueId('kind-req');
 
   test.beforeAll(async ({ request }) => {
-    // pre-seeded admin 사용자로 로그인
-    const loginRes = await request.post('/api/auth/login', {
-      data: { username: 'admin', password: 'adminpass123' },
-    });
-    await debugResponse('crud-login', loginRes);
-    const loginBody = await loginRes.json();
-    authToken = loginBody.token;
+    const auth = await loginAsAdmin(request);
+    authToken = auth.token;
     console.log(`[DEBUG] CRUD authToken obtained: ${!!authToken}`);
   });
 
@@ -170,13 +168,8 @@ test.describe('요청 거절 플로우', () => {
   const testExternalId = uniqueId('kind-reject');
 
   test.beforeAll(async ({ request }) => {
-    // pre-seeded admin 사용자로 로그인
-    const loginRes = await request.post('/api/auth/login', {
-      data: { username: 'admin', password: 'adminpass123' },
-    });
-    await debugResponse('reject-login', loginRes);
-    const loginBody = await loginRes.json();
-    authToken = loginBody.token;
+    const auth = await loginAsAdmin(request);
+    authToken = auth.token;
     console.log(`[DEBUG] Reject authToken obtained: ${!!authToken}`);
 
     // 테스트용 요청 생성

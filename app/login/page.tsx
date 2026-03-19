@@ -7,20 +7,15 @@ function LoginContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const errorParam = searchParams.get('error');
+  const error = errorParam ? '로그인에 실패했습니다. 다시 시도해 주세요.' : null;
 
   useEffect(() => {
     const token = localStorage.getItem('token');
     if (token) {
       router.push('/requests');
-      return;
     }
-
-    const errorParam = searchParams.get('error');
-    if (errorParam) {
-      setError('로그인에 실패했습니다. 다시 시도해 주세요.');
-    }
-  }, [router, searchParams]);
+  }, [router]);
 
   function handleLogin() {
     setIsLoading(true);

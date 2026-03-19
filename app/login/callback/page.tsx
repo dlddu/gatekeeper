@@ -1,28 +1,23 @@
 'use client';
 
-import { useEffect, useState, Suspense } from 'react';
+import { useEffect, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 
 function LoginCallbackContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const [isError, setIsError] = useState(false);
-  const [isProcessing, setIsProcessing] = useState(true);
+  const token = searchParams.get('token');
+  const error = searchParams.get('error');
+  const isError = !token || !!error;
 
   useEffect(() => {
-    const token = searchParams.get('token');
-    const error = searchParams.get('error');
-
     if (token && !error) {
       localStorage.setItem('token', token);
       router.push('/requests');
-    } else {
-      setIsError(true);
-      setIsProcessing(false);
     }
-  }, [router, searchParams]);
+  }, [router, token, error]);
 
-  if (isProcessing && !isError) {
+  if (!isError) {
     return (
       <div
         className="min-h-screen bg-gray-50 flex items-center justify-center"

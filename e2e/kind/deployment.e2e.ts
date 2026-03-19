@@ -59,15 +59,6 @@ test.describe('회원가입 및 인증', () => {
     expect(response.status()).toBe(404);
   });
 
-  test('POST /api/auth/login 으로 로그인할 수 있다', async ({ request }) => {
-    const response = await request.post('/api/auth/login', {
-      data: {
-        username: TEST_USERS.admin.username,
-      },
-    });
-    expect([200, 404]).toContain(response.status());
-  });
-
   test('인증된 사용자가 보호된 API에 접근할 수 있다', async ({ request }) => {
     const response = await request.get('/api/me/requests/pending', {
       headers: { 'x-authentik-uid': authentikUid },
@@ -195,25 +186,3 @@ test.describe('요청 거절 플로우', () => {
   });
 });
 
-test.describe('브라우저 UI 렌더링', () => {
-  test('로그인 페이지가 정상적으로 렌더링된다', async ({ page }) => {
-    await page.goto('/login');
-    await expect(page).toHaveTitle(/Gatekeeper/i);
-
-    // OIDC 로그인 UI 요소 확인
-    await expect(page.getByRole('heading', { name: 'Gatekeeper' })).toBeVisible();
-    await expect(page.getByRole('button', { name: '로그인' })).toBeVisible();
-  });
-
-  test('로그인 버튼 클릭 시 OIDC 인가 엔드포인트로 이동한다', async ({ page }) => {
-    await page.goto('/login');
-
-    const [response] = await Promise.all([
-      page.waitForResponse(resp => resp.url().includes('/api/auth/oidc/authorize')),
-      page.getByRole('button', { name: '로그인' }).click(),
-    ]);
-
-    // OIDC authorize 엔드포인트가 호출되었는지 확인
-    expect(response.url()).toContain('/api/auth/oidc/authorize');
-  });
-});

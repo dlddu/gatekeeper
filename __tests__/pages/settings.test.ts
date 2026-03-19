@@ -12,12 +12,9 @@
  *    - 페이지 제목 "설정"
  *    - 알림 토글 UI (toggle/checkbox, state 존재)
  *    - 5가지 상태: loading / disabled / enabled / denied / unsupported
- * 3. 인증 처리
- *    - localStorage token 읽기
- *    - /login 리다이렉트
- *    - useRouter + next/navigation import
- *    - useEffect 인증 체크
- *    - 401 시 token 제거 및 리다이렉트
+ * 3. 인증 처리 (Forward Auth)
+ *    - localStorage 기반 JWT 인증 로직 제거 (Traefik이 처리)
+ *    - useEffect로 UI 초기화 로직 처리
  * 4. Push API 지원 여부 처리
  *    - serviceWorker 지원 확인
  *    - PushManager 지원 확인
@@ -29,7 +26,7 @@
  *    - unsubscribe() 호출
  *    - DELETE /api/me/push/unsubscribe
  *    - denied 분기 처리
- *    - JWT Bearer 토큰 Authorization 헤더
+ *    - Forward Auth 기반 인증 (Authorization/Bearer 헤더 제거)
  * 5. VAPID 키 처리
  *    - applicationServerKey 전달
  *    - userVisibleOnly: true
@@ -190,46 +187,22 @@ describe('app/settings/page.tsx — UI 요구사항 정적 분석', () => {
 // 섹션 3: 인증 처리
 // ============================================================
 
-describe('app/settings/page.tsx — 인증 처리', () => {
+describe('app/settings/page.tsx — 인증 처리 (Forward Auth)', () => {
   let source: string;
 
   beforeAll(() => {
     source = fs.readFileSync(PAGE_PATH, 'utf-8');
   });
 
-  it('localStorage에서 JWT 토큰을 읽는 로직이 포함되어야 한다', () => {
-    // Assert
-    expect(source).toContain('localStorage');
-    expect(source).toContain('token');
+  it('localStorage 기반 JWT 인증 로직이 제거되어야 한다 (Forward Auth 전환)', () => {
+    // Forward Auth에서는 Traefik이 인증을 처리하므로 클라이언트 측 JWT 로직 불필요
+    expect(source).not.toContain('localStorage');
+    expect(source).not.toContain('/login');
   });
 
-  it('토큰이 없는 경우 /login으로 리다이렉트하는 로직이 포함되어야 한다', () => {
-    // Assert
-    expect(source).toContain('/login');
-  });
-
-  it('next/navigation에서 useRouter를 import해야 한다', () => {
-    // Assert — 리다이렉트를 위해 useRouter 필요
-    expect(source).toContain('useRouter');
-    expect(source).toContain('next/navigation');
-  });
-
-  it('useEffect로 인증 체크 로직을 처리해야 한다', () => {
-    // Assert — 마운트 시 토큰 확인
+  it('useEffect로 UI 초기화 로직을 처리해야 한다', () => {
+    // Assert — 마운트 시 Push 알림 상태 확인 등
     expect(source).toContain('useEffect');
-  });
-
-  it('API 401 응답 시 localStorage token을 제거하는 로직이 포함되어야 한다', () => {
-    // Assert — 401 처리 및 token 삭제
-    const has401 = source.includes('401');
-    const hasRemoveItem = source.includes('removeItem') || source.includes('localStorage');
-    expect(has401 && hasRemoveItem).toBe(true);
-  });
-
-  it('API 401 응답 시 /login으로 리다이렉트하는 로직이 포함되어야 한다', () => {
-    // Assert — 401 시 로그인 페이지로 이동
-    expect(source).toContain('401');
-    expect(source).toContain('/login');
   });
 });
 
@@ -321,15 +294,11 @@ describe('app/settings/page.tsx — Push API 지원 여부 처리', () => {
   // ----------------------------------------------------------------
   // 4-5. JWT Bearer 토큰 Authorization 헤더
   // ----------------------------------------------------------------
-  describe('JWT Bearer 토큰 인증 헤더', () => {
-    it('API 호출 시 Authorization 헤더를 전송하는 로직이 포함되어야 한다', () => {
-      // Assert
-      expect(source).toContain('Authorization');
-    });
-
-    it('Bearer 토큰 형식으로 Authorization 헤더를 설정해야 한다', () => {
-      // Assert — `Bearer ${token}` 패턴
-      expect(source).toContain('Bearer');
+  describe('Forward Auth 기반 인증 (JWT Bearer 제거)', () => {
+    it('Authorization/Bearer 헤더 전송 로직이 제거되어야 한다', () => {
+      // Forward Auth에서는 Traefik이 인증 헤더를 추가하므로 클라이언트에서 불필요
+      expect(source).not.toContain('Authorization');
+      expect(source).not.toContain('Bearer');
     });
   });
 });

@@ -27,9 +27,10 @@ async function seed() {
     console.log('[seed] Users before insert:', beforeCount.rows[0].cnt);
 
     // Insert admin user
+    const now = new Date().toISOString();
     const result = await client.execute({
-      sql: 'INSERT OR IGNORE INTO User (id, username, passwordHash, displayName) VALUES (?, ?, ?, ?)',
-      args: ['seed-admin-001', 'admin', ADMIN_PASSWORD_HASH, 'Admin User']
+      sql: 'INSERT OR IGNORE INTO User (id, username, passwordHash, displayName, createdAt, updatedAt) VALUES (?, ?, ?, ?, ?, ?)',
+      args: ['seed-admin-001', 'admin', ADMIN_PASSWORD_HASH, 'Admin User', now, now]
     });
     console.log('[seed] Insert result - rows affected:', result.rowsAffected);
 

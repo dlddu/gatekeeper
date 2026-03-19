@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test';
-import { TEST_USERS } from './helpers/auth';
+import { loginViaAPI } from './helpers/auth';
 import {
   cleanupTestData,
   findRequestByExternalId,
@@ -24,13 +24,11 @@ import {
 test.describe('대기 목록 화면 (/requests)', () => {
   test('로그인 후 대기 목록 페이지에 접근하면 PENDING 요청이 카드로 렌더링된다 (happy path)', async ({
     page,
+    request,
   }) => {
     // Arrange: 로그인
-    await page.goto('/login');
-    await page.getByLabel('아이디').fill(TEST_USERS.admin.username);
-    await page.getByLabel('비밀번호').fill(TEST_USERS.admin.password);
-    await page.getByRole('button', { name: '로그인' }).click();
-    await expect(page).toHaveURL('/requests');
+    await loginViaAPI(page, request);
+    await page.goto('/requests');
 
     // Act: 글로벌 시드 데이터의 PENDING 요청(e2e-pending-001) 카드 확인
     const pendingRequest = await findRequestByExternalId('e2e-pending-001');
@@ -45,13 +43,11 @@ test.describe('대기 목록 화면 (/requests)', () => {
 
   test('timeoutSeconds가 설정된 PENDING 요청 카드에 남은 시간이 amber 색상으로 표시된다 (happy path)', async ({
     page,
+    request,
   }) => {
     // Arrange: 로그인
-    await page.goto('/login');
-    await page.getByLabel('아이디').fill(TEST_USERS.admin.username);
-    await page.getByLabel('비밀번호').fill(TEST_USERS.admin.password);
-    await page.getByRole('button', { name: '로그인' }).click();
-    await expect(page).toHaveURL('/requests');
+    await loginViaAPI(page, request);
+    await page.goto('/requests');
 
     // Act: 글로벌 시드 데이터의 타임아웃 있는 PENDING 요청(e2e-timeout-001) 카드 확인
     const timeoutRequest = await findRequestByExternalId('e2e-timeout-001');
@@ -71,13 +67,11 @@ test.describe('대기 목록 화면 (/requests)', () => {
 
   test('timeoutSeconds가 null인 PENDING 요청 카드에 "제한 없음"이 gray 색상으로 표시된다 (happy path)', async ({
     page,
+    request,
   }) => {
     // Arrange: 로그인
-    await page.goto('/login');
-    await page.getByLabel('아이디').fill(TEST_USERS.admin.username);
-    await page.getByLabel('비밀번호').fill(TEST_USERS.admin.password);
-    await page.getByRole('button', { name: '로그인' }).click();
-    await expect(page).toHaveURL('/requests');
+    await loginViaAPI(page, request);
+    await page.goto('/requests');
 
     // Act: 글로벌 시드 데이터의 타임아웃 없는 PENDING 요청(e2e-pending-001) 카드 확인
     const noTimeoutRequest = await findRequestByExternalId('e2e-pending-001');
@@ -92,17 +86,14 @@ test.describe('대기 목록 화면 (/requests)', () => {
     await expect(noLimitEl).toBeVisible();
   });
 
-  test('PENDING 상태의 요청이 없을 때 빈 상태 UI가 표시된다 (edge case)', async ({ page }) => {
+  test('PENDING 상태의 요청이 없을 때 빈 상태 UI가 표시된다 (edge case)', async ({ page, request }) => {
     // Arrange: 모든 PENDING 요청을 APPROVED로 임시 변경하여 빈 상태 유도
     const changedIds = await updateAllPendingRequestsStatus('APPROVED');
 
     try {
       // 로그인
-      await page.goto('/login');
-      await page.getByLabel('아이디').fill(TEST_USERS.admin.username);
-      await page.getByLabel('비밀번호').fill(TEST_USERS.admin.password);
-      await page.getByRole('button', { name: '로그인' }).click();
-      await expect(page).toHaveURL('/requests');
+      await loginViaAPI(page, request);
+      await page.goto('/requests');
 
       // Assert: "대기 중인 요청이 없습니다" 텍스트가 표시됨
       await expect(page.getByText('대기 중인 요청이 없습니다')).toBeVisible();
@@ -114,13 +105,11 @@ test.describe('대기 목록 화면 (/requests)', () => {
 
   test('PENDING 요청 카드를 클릭하면 요청 상세 페이지로 이동한다 (happy path)', async ({
     page,
+    request,
   }) => {
     // Arrange: 로그인
-    await page.goto('/login');
-    await page.getByLabel('아이디').fill(TEST_USERS.admin.username);
-    await page.getByLabel('비밀번호').fill(TEST_USERS.admin.password);
-    await page.getByRole('button', { name: '로그인' }).click();
-    await expect(page).toHaveURL('/requests');
+    await loginViaAPI(page, request);
+    await page.goto('/requests');
 
     // Act: 글로벌 시드 데이터의 PENDING 요청(e2e-pending-001) 카드 클릭
     const pendingRequest = await findRequestByExternalId('e2e-pending-001');

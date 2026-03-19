@@ -18,13 +18,12 @@ import { loginAsAdmin } from './helpers/auth';
  * - OIDC Mock 서버: http://localhost:9999 (global-setup.ts에서 기동)
  * - OIDC_ISSUER: http://localhost:9999
  * - OIDC_CLIENT_ID: test-client
- * - OIDC_REDIRECT_URI: http://localhost:3000/api/auth/oidc/callback
+ * - OIDC_REDIRECT_URI: http://localhost:3001/api/auth/oidc/callback
  *
  * TODO: DLD-799 구현 완료 후 test.describe.skip → test.describe 로 변경
  */
 
-// TODO: Activate when DLD-799 is implemented
-test.describe.skip('OIDC 로그인 UI 플로우', () => {
+test.describe('OIDC 로그인 UI 플로우', () => {
   test('/login 페이지에서 로그인 버튼 클릭 시 OIDC 인증을 거쳐 /requests에 도달한다 (happy path)', async ({
     page,
   }) => {

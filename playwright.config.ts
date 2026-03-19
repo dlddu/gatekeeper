@@ -84,7 +84,7 @@ export default defineConfig({
       OIDC_ISSUER: 'http://localhost:9999',
       OIDC_CLIENT_ID: 'test-client',
       OIDC_CLIENT_SECRET: 'test-secret',
-      OIDC_REDIRECT_URI: 'http://localhost:3000/api/auth/oidc/callback',
+      OIDC_REDIRECT_URI: 'http://localhost:3001/api/auth/oidc/callback',
     },
   },
 });

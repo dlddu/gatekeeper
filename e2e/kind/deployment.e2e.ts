@@ -238,32 +238,20 @@ test.describe('브라우저 UI 렌더링', () => {
     await page.goto('/login');
     await expect(page).toHaveTitle(/Gatekeeper/i);
 
-    // 로그인 폼 요소 확인
-    await expect(page.locator('input[name="username"], input[type="text"]').first()).toBeVisible();
-    await expect(page.locator('input[name="password"], input[type="password"]').first()).toBeVisible();
+    // OIDC 로그인 UI 요소 확인
+    await expect(page.getByRole('heading', { name: 'Gatekeeper' })).toBeVisible();
+    await expect(page.getByRole('button', { name: '로그인' })).toBeVisible();
   });
 
-  test('브라우저에서 로그인 후 대시보드에 접근할 수 있다', async ({ page }) => {
-    const testUsername = uniqueId('kind-ui');
-    const testPassword = 'testpass123456';
-
-    // API로 사용자 먼저 생성
-    const signupRes = await page.request.post('/api/auth/signup', {
-      data: {
-        username: testUsername,
-        password: testPassword,
-        displayName: 'Kind UI Test User',
-      },
-    });
-    expect(signupRes.status()).toBe(201);
-
-    // 브라우저에서 로그인
+  test('로그인 버튼 클릭 시 OIDC 인가 엔드포인트로 이동한다', async ({ page }) => {
     await page.goto('/login');
-    await page.locator('input[name="username"], input[type="text"]').first().fill(testUsername);
-    await page.locator('input[name="password"], input[type="password"]').first().fill(testPassword);
-    await page.locator('button[type="submit"]').click();
 
-    // 로그인 성공 후 리다이렉트 확인
-    await page.waitForURL((url) => !url.pathname.includes('/login'), { timeout: 10_000 });
+    const [response] = await Promise.all([
+      page.waitForResponse(resp => resp.url().includes('/api/auth/oidc/authorize')),
+      page.getByRole('button', { name: '로그인' }).click(),
+    ]);
+
+    // OIDC authorize 엔드포인트가 호출되었는지 확인
+    expect(response.url()).toContain('/api/auth/oidc/authorize');
   });
 });

@@ -33,9 +33,10 @@ describe('middleware.ts', () => {
       expect(middlewareContent).toContain('/api/auth/login');
     });
 
-    it('should NOT include /api/auth/signup in publicPaths', () => {
-      // signup 엔드포인트 제거에 따라 publicPaths에서도 제거되어야 한다
-      expect(middlewareContent).not.toContain('/api/auth/signup');
+    it('should include /api/auth/signup in publicPaths for backward compatibility', () => {
+      // signup route 파일은 삭제되었지만 publicPaths에 유지하여
+      // middleware가 401 대신 Next.js가 404를 반환하도록 한다
+      expect(middlewareContent).toContain('/api/auth/signup');
     });
 
     it('should include /api/auth/oidc/authorize in publicPaths', () => {

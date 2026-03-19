@@ -39,32 +39,27 @@ test.describe('헬스 체크', () => {
 });
 
 test.describe('회원가입 및 인증', () => {
-  const testUsername = uniqueId('kind-user');
-  const testPassword = 'testpass123456';
+  const adminUsername = 'admin';
+  const adminPassword = 'adminpass123';
   let authToken: string;
 
-  test('POST /api/auth/signup 으로 새 사용자를 등록할 수 있다', async ({ request }) => {
+  test('POST /api/auth/signup 엔드포인트가 제거되었다 (404)', async ({ request }) => {
     const response = await request.post('/api/auth/signup', {
       data: {
-        username: testUsername,
-        password: testPassword,
-        displayName: 'Kind E2E Test User',
+        username: 'any-user',
+        password: 'anypass123',
+        displayName: 'Any User',
       },
     });
-    await debugResponse('signup', response);
-    expect(response.status()).toBe(201);
-
-    const body = await response.json();
-    expect(body).toHaveProperty('token');
-    expect(body).toHaveProperty('username', testUsername);
-    authToken = body.token;
+    await debugResponse('signup-removed', response);
+    expect(response.status()).toBe(404);
   });
 
   test('POST /api/auth/login 으로 로그인할 수 있다', async ({ request }) => {
     const response = await request.post('/api/auth/login', {
       data: {
-        username: testUsername,
-        password: testPassword,
+        username: adminUsername,
+        password: adminPassword,
       },
     });
     expect(response.status()).toBe(200);
@@ -91,22 +86,11 @@ test.describe('요청(Request) CRUD', () => {
   let authToken: string;
   let createdRequestId: string;
   const testExternalId = uniqueId('kind-req');
-  const testUsername = uniqueId('kind-crud');
-  const testPassword = 'testpass123456';
 
   test.beforeAll(async ({ request }) => {
-    // 테스트용 사용자 생성 및 로그인
-    const signupRes = await request.post('/api/auth/signup', {
-      data: {
-        username: testUsername,
-        password: testPassword,
-        displayName: 'Kind CRUD Test User',
-      },
-    });
-    await debugResponse('crud-signup', signupRes);
-
+    // pre-seeded admin 사용자로 로그인
     const loginRes = await request.post('/api/auth/login', {
-      data: { username: testUsername, password: testPassword },
+      data: { username: 'admin', password: 'adminpass123' },
     });
     await debugResponse('crud-login', loginRes);
     const loginBody = await loginRes.json();
@@ -184,22 +168,11 @@ test.describe('요청 거절 플로우', () => {
   let authToken: string;
   let requestId: string;
   const testExternalId = uniqueId('kind-reject');
-  const testUsername = uniqueId('kind-rejector');
-  const testPassword = 'testpass123456';
 
   test.beforeAll(async ({ request }) => {
-    // 사용자 생성 및 로그인
-    const signupRes = await request.post('/api/auth/signup', {
-      data: {
-        username: testUsername,
-        password: testPassword,
-        displayName: 'Kind Reject Test User',
-      },
-    });
-    await debugResponse('reject-signup', signupRes);
-
+    // pre-seeded admin 사용자로 로그인
     const loginRes = await request.post('/api/auth/login', {
-      data: { username: testUsername, password: testPassword },
+      data: { username: 'admin', password: 'adminpass123' },
     });
     await debugResponse('reject-login', loginRes);
     const loginBody = await loginRes.json();

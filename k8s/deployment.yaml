@@ -18,7 +18,7 @@ spec:
       initContainers:
         - name: prisma-db-push
           image: ghcr.io/dlddu/gatekeeper:latest
-          command: ["sh", "-c", "npx prisma db push --accept-data-loss && node prisma/seed-admin.js"]
+          command: ["npx", "prisma", "db", "push", "--accept-data-loss"]
           env:
             - name: DATABASE_URL
               value: "file:/app/data/gatekeeper.db"

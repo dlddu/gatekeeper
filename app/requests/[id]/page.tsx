@@ -40,26 +40,9 @@ export default function RequestDetailPage({
   useEffect(() => {
     if (!requestId) return;
 
-    const token = localStorage.getItem('token');
-    if (!token) {
-      router.push('/login');
-      return;
-    }
-
     async function fetchRequest() {
-      const token = localStorage.getItem('token');
       try {
-        const response = await fetch(`/api/me/requests/${requestId}`, {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        });
-
-        if (response.status === 401) {
-          localStorage.removeItem('token');
-          router.push('/login');
-          return;
-        }
+        const response = await fetch(`/api/me/requests/${requestId}`);
 
         if (!response.ok) {
           setError('요청 정보를 불러오는데 실패했습니다');
@@ -76,7 +59,7 @@ export default function RequestDetailPage({
     }
 
     fetchRequest();
-  }, [requestId, router]);
+  }, [requestId]);
 
   function handleBack() {
     router.push('/requests');
@@ -100,12 +83,6 @@ export default function RequestDetailPage({
   async function handleConfirmAction() {
     if (!pendingAction || !request) return;
 
-    const token = localStorage.getItem('token');
-    if (!token) {
-      router.push('/login');
-      return;
-    }
-
     setIsSubmitting(true);
 
     try {
@@ -117,16 +94,9 @@ export default function RequestDetailPage({
       const response = await fetch(endpoint, {
         method: 'PATCH',
         headers: {
-          Authorization: `Bearer ${token}`,
           'Content-Type': 'application/json',
         },
       });
-
-      if (response.status === 401) {
-        localStorage.removeItem('token');
-        router.push('/login');
-        return;
-      }
 
       if (!response.ok) {
         setError('처리에 실패했습니다');

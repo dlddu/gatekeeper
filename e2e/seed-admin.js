@@ -9,7 +9,7 @@
 const { createClient } = require('@libsql/client');
 
 const ADMIN_USERNAME = process.env.ADMIN_USERNAME || 'admin';
-const ADMIN_AUTHENTIK_UID = process.env.ADMIN_AUTHENTIK_UID || 'seed-admin-authentik-uid';
+const ADMIN_AUTHENTIK_UID = process.env.ADMIN_AUTHENTIK_UID || 'e2e-admin-uid-001';
 
 const url = process.env.DATABASE_URL || 'file:./dev.db';
 const client = createClient({ url });

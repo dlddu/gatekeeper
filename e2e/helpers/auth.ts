@@ -76,7 +76,12 @@ export async function loginViaAPI(
   _request: APIRequestContext,
   user: typeof TEST_USERS.admin | typeof TEST_USERS.user = TEST_USERS.admin
 ): Promise<AuthHeaders> {
-  await page.goto('/');
+  // Forward Auth: set headers on all requests from this page (simulates Traefik)
+  await page.setExtraHTTPHeaders({
+    'x-authentik-uid': user.authentikUid,
+    'x-authentik-username': user.username,
+    'x-authentik-email': user.email,
+  });
   return {
     authentikUid: user.authentikUid,
     authentikUsername: user.username,

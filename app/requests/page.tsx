@@ -1,7 +1,6 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { useRouter } from 'next/navigation';
 import RequestCardList from '@/components/RequestCardList';
 import BottomNav from '@/components/BottomNav';
 
@@ -17,32 +16,14 @@ interface Request {
 }
 
 export default function RequestsPage() {
-  const router = useRouter();
   const [requests, setRequests] = useState<Request[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    const token = localStorage.getItem('token');
-    if (!token) {
-      router.push('/login');
-      return;
-    }
-
     async function fetchPendingRequests() {
-      const token = localStorage.getItem('token');
       try {
-        const response = await fetch('/api/me/requests/pending', {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        });
-
-        if (response.status === 401) {
-          localStorage.removeItem('token');
-          router.push('/login');
-          return;
-        }
+        const response = await fetch('/api/me/requests/pending');
 
         if (!response.ok) {
           setError('요청 목록을 불러오는데 실패했습니다');
@@ -59,7 +40,7 @@ export default function RequestsPage() {
     }
 
     fetchPendingRequests();
-  }, [router]);
+  }, []);
 
   return (
     <div

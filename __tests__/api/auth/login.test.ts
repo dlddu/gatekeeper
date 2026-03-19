@@ -187,6 +187,70 @@ describe('POST /api/auth/login', () => {
   });
 
   // ----------------------------------------------------------------
+  // OIDC 전용 사용자 (passwordHash 없음) → 401
+  // ----------------------------------------------------------------
+  describe('OIDC 전용 사용자 (401 Unauthorized)', () => {
+    const oidcOnlyUser = {
+      id: 'oidc-user-1',
+      username: 'oidc-user',
+      passwordHash: null,
+      displayName: 'OIDC User',
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    };
+
+    it('passwordHash가 null인 사용자로 로그인 시도하면 401을 반환해야 한다', async () => {
+      // Arrange
+      mockFindUnique.mockResolvedValue(oidcOnlyUser);
+      const request = makeRequest({ username: 'oidc-user', password: 'any-password' });
+
+      // Act
+      const response = await POST(request);
+
+      // Assert
+      expect(response.status).toBe(401);
+    });
+
+    it('OIDC 전용 사용자 401 응답 body에 error 필드가 포함되어야 한다', async () => {
+      // Arrange
+      mockFindUnique.mockResolvedValue(oidcOnlyUser);
+      const request = makeRequest({ username: 'oidc-user', password: 'any-password' });
+
+      // Act
+      const response = await POST(request);
+      const body = await response.json();
+
+      // Assert
+      expect(body).toHaveProperty('error');
+      expect(typeof body.error).toBe('string');
+    });
+
+    it('passwordHash가 null이면 bcrypt.compare를 호출하지 않아야 한다', async () => {
+      // Arrange
+      mockFindUnique.mockResolvedValue(oidcOnlyUser);
+      const request = makeRequest({ username: 'oidc-user', password: 'any-password' });
+
+      // Act
+      await POST(request);
+
+      // Assert
+      expect(mockBcryptCompare).not.toHaveBeenCalled();
+    });
+
+    it('passwordHash가 null이면 signToken을 호출하지 않아야 한다', async () => {
+      // Arrange
+      mockFindUnique.mockResolvedValue(oidcOnlyUser);
+      const request = makeRequest({ username: 'oidc-user', password: 'any-password' });
+
+      // Act
+      await POST(request);
+
+      // Assert
+      expect(mockSignToken).not.toHaveBeenCalled();
+    });
+  });
+
+  // ----------------------------------------------------------------
   // 잘못된 비밀번호 → 401
   // ----------------------------------------------------------------
   describe('잘못된 비밀번호 (401 Unauthorized)', () => {

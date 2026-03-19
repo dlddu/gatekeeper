@@ -1,12 +1,11 @@
 import { execSync } from 'child_process';
 import path from 'path';
 import fs from 'fs';
-import { startOidcMockServer } from './helpers/oidc-mock';
 
 /**
  * Playwright 글로벌 셋업 (모든 테스트 실행 전 1회)
  *
- * DLD-647: e2e 테스트 환경 구성
+ * DLD-827: Forward Auth 기반으로 변경
  *
  * 수행 작업:
  * 1. 테스트 전용 SQLite DB 파일 생성
@@ -18,10 +17,6 @@ const testDBPath = path.resolve(__dirname, '..', 'e2e-test.db');
 const testDBUrl = `file:${testDBPath}`;
 
 async function globalSetup(): Promise<void> {
-  console.log('\n[E2E Setup] OIDC Mock 서버 시작 중...');
-  await startOidcMockServer(9999);
-  console.log('[E2E Setup] OIDC Mock 서버 시작 완료');
-
   console.log('[E2E Setup] 테스트용 DB 초기화 시작...');
 
   // 이전 테스트 DB가 남아 있으면 삭제
@@ -59,56 +54,41 @@ async function seedDatabase(databaseUrl: string): Promise<void> {
   // 동적 import로 Prisma 클라이언트 생성 (테스트 DB URL 사용)
   const { PrismaClient } = await import('@prisma/client');
   const { PrismaLibSql } = await import('@prisma/adapter-libsql');
-  const bcrypt = await import('bcryptjs');
 
   const adapter = new PrismaLibSql({ url: databaseUrl });
   const prisma = new PrismaClient({ adapter });
 
   try {
-    // 테스트 관리자 사용자 생성
-    const adminPasswordHash = await bcrypt.hash('adminpass123', 10);
+    // 테스트 관리자 사용자 생성 (Forward Auth: authentikUid 사용)
     await prisma.user.upsert({
       where: { username: 'admin' },
       update: {},
       create: {
         username: 'admin',
-        passwordHash: adminPasswordHash,
+        authentikUid: 'e2e-admin-uid-001',
         displayName: 'E2E Test Admin',
       },
     });
 
     // 일반 테스트 사용자 생성
-    const userPasswordHash = await bcrypt.hash('userpass123', 10);
     await prisma.user.upsert({
       where: { username: 'testuser' },
       update: {},
       create: {
         username: 'testuser',
-        passwordHash: userPasswordHash,
+        authentikUid: 'e2e-user-uid-001',
         displayName: 'E2E Test User',
       },
     });
 
-    // 미들웨어 공개 경로 테스트용 사용자 생성 (e2e/auth.e2e.ts:227)
-    const testPasswordHash = await bcrypt.hash('test', 10);
+    // 미들웨어 공개 경로 테스트용 사용자 생성
     await prisma.user.upsert({
       where: { username: 'test' },
       update: {},
       create: {
         username: 'test',
-        passwordHash: testPasswordHash,
+        authentikUid: 'e2e-test-uid-001',
         displayName: 'Middleware Test User',
-      },
-    });
-
-    // OIDC 테스트 사용자 생성
-    await prisma.user.upsert({
-      where: { username: 'oidc-user' },
-      update: {},
-      create: {
-        username: 'oidc-user',
-        displayName: 'OIDC Test User',
-        oidcSub: 'test-oidc-sub-001',
       },
     });
 

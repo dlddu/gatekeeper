@@ -2,7 +2,8 @@
  * middleware.ts 검증 테스트
  *
  * publicPaths 설정과 미들웨어 파일의 구조적 요구사항을 검증합니다.
- * 실제 미들웨어 동작(JWT 검증 등)은 별도 mock 없이 파일 소스를 직접 읽어 정적 분석합니다.
+ * Forward Auth 기반으로 변경된 미들웨어를 정적 분석합니다.
+ * (JWT 검증 로직이 제거되고 Authentik Forward Auth 헤더 기반 인증으로 대체)
  */
 
 import fs from 'fs';
@@ -29,30 +30,46 @@ describe('middleware.ts', () => {
   // publicPaths 내용 검증
   // ----------------------------------------------------------------
   describe('publicPaths', () => {
-    it('should include /api/auth/login in publicPaths', () => {
-      expect(middlewareContent).toContain('/api/auth/login');
+    it('should NOT import from lib/auth (deleted in Forward Auth migration)', () => {
+      expect(middlewareContent).not.toMatch(/from ['"]@\/lib\/auth['"]/);
+      expect(middlewareContent).not.toMatch(/from ['"]\.\.\/lib\/auth['"]/);
     });
 
-    it('should include /api/auth/signup in publicPaths for backward compatibility', () => {
-      // signup route 파일은 삭제되었지만 publicPaths에 유지하여
-      // middleware가 401 대신 Next.js가 404를 반환하도록 한다
-      expect(middlewareContent).toContain('/api/auth/signup');
+    it('should NOT contain /api/auth/login in publicPaths (auth routes deleted)', () => {
+      // Forward Auth 환경에서는 Authentik이 인증을 담당하므로
+      // /api/auth/login 라우트 자체가 삭제되어 publicPaths에서도 제거된다
+      expect(middlewareContent).not.toContain('/api/auth/login');
     });
 
-    it('should include /api/auth/oidc/authorize in publicPaths', () => {
-      expect(middlewareContent).toContain('/api/auth/oidc/authorize');
+    it('should NOT contain /api/auth/oidc/authorize in publicPaths (OIDC routes deleted)', () => {
+      expect(middlewareContent).not.toContain('/api/auth/oidc/authorize');
     });
 
-    it('should include /api/auth/oidc/callback in publicPaths', () => {
-      expect(middlewareContent).toContain('/api/auth/oidc/callback');
+    it('should NOT contain /api/auth/oidc/callback in publicPaths (OIDC routes deleted)', () => {
+      expect(middlewareContent).not.toContain('/api/auth/oidc/callback');
+    });
+
+    it('should NOT contain /login in publicPaths (login page deleted)', () => {
+      // Forward Auth 환경에서는 Authentik이 로그인 페이지를 제공하므로
+      // /login 경로가 삭제된다
+      expect(middlewareContent).not.toContain('/login');
     });
 
     it('should include /api/health in publicPaths', () => {
       expect(middlewareContent).toContain('/api/health');
     });
+  });
 
-    it('should include /login in publicPaths', () => {
-      expect(middlewareContent).toContain('/login');
+  // ----------------------------------------------------------------
+  // Forward Auth 구조 검증
+  // ----------------------------------------------------------------
+  describe('Forward Auth structure', () => {
+    it('should NOT use verifyToken (JWT auth removed)', () => {
+      expect(middlewareContent).not.toContain('verifyToken');
+    });
+
+    it('should NOT reference JWT_SECRET (JWT auth removed)', () => {
+      expect(middlewareContent).not.toContain('JWT_SECRET');
     });
   });
 

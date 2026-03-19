@@ -357,23 +357,4 @@ test.describe('설정 페이지 Push 알림 토글 (/settings)', () => {
     ).toBeVisible();
   });
 
-  // --- error case ---
-
-  test('미인증 상태로 /settings에 접근하면 /login으로 리다이렉트된다 (error case)', async ({
-    browser,
-  }) => {
-    // Arrange: 로그인하지 않은 새 브라우저 컨텍스트 (beforeEach 로그인 우회)
-    const context = await browser.newContext();
-    const page = await context.newPage();
-
-    try {
-      // Act: 미인증 상태로 설정 페이지 직접 접근
-      await page.goto('/settings');
-
-      // Assert: /login으로 리다이렉트
-      await expect(page).toHaveURL('/login');
-    } finally {
-      await context.close();
-    }
-  });
 });

@@ -1,7 +1,6 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { useRouter } from 'next/navigation';
 import BottomNav from '@/components/BottomNav';
 
 const NEXT_PUBLIC_VAPID_PUBLIC_KEY = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY ?? '';
@@ -19,19 +18,12 @@ function urlBase64ToUint8Array(base64String: string): Uint8Array<ArrayBuffer> {
 }
 
 export default function SettingsPage() {
-  const router = useRouter();
   const [isSubscribed, setIsSubscribed] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [isUnsupported, setIsUnsupported] = useState(false);
   const [isDenied, setIsDenied] = useState(false);
 
   useEffect(() => {
-    const token = localStorage.getItem('token');
-    if (!token) {
-      router.push('/login');
-      return;
-    }
-
     async function initPushState() {
       try {
         if (
@@ -66,16 +58,10 @@ export default function SettingsPage() {
     }
 
     initPushState();
-  }, [router]);
+  }, []);
 
   async function handleToggle() {
     if (isLoading || isUnsupported || isDenied) return;
-
-    const token = localStorage.getItem('token');
-    if (!token) {
-      router.push('/login');
-      return;
-    }
 
     setIsLoading(true);
     try {
@@ -108,16 +94,9 @@ export default function SettingsPage() {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
-            Authorization: `Bearer ${token}`,
           },
           body: JSON.stringify(subscription),
         });
-
-        if (response.status === 401) {
-          localStorage.removeItem('token');
-          router.push('/login');
-          return;
-        }
 
         if (response.ok) {
           setIsSubscribed(true);
@@ -143,16 +122,9 @@ export default function SettingsPage() {
           method: 'DELETE',
           headers: {
             'Content-Type': 'application/json',
-            Authorization: `Bearer ${token}`,
           },
           body: JSON.stringify({ endpoint: subscription.endpoint }),
         });
-
-        if (response.status === 401) {
-          localStorage.removeItem('token');
-          router.push('/login');
-          return;
-        }
 
         if (response.ok) {
           setIsSubscribed(false);

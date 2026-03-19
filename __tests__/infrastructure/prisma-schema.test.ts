@@ -55,9 +55,9 @@ describe('prisma/schema.prisma', () => {
       expect(userModelMatch![1]).toContain('username');
     });
 
-    it('should have passwordHash field', () => {
+    it('should NOT have passwordHash field (removed in Forward Auth migration)', () => {
       const userModelMatch = schemaContent.match(/model User \{([^}]+)\}/s);
-      expect(userModelMatch![1]).toContain('passwordHash');
+      expect(userModelMatch![1]).not.toContain('passwordHash');
     });
 
     it('should have displayName field', () => {
@@ -81,32 +81,31 @@ describe('prisma/schema.prisma', () => {
     });
 
     // ----------------------------------------------------------------
-    // OIDC 지원 필드
+    // Forward Auth 지원 필드
     // ----------------------------------------------------------------
 
-    it('should have passwordHash field as nullable (String?)', () => {
-      // passwordHash는 OIDC 전용 사용자는 비밀번호가 없으므로 nullable이어야 한다
-      const userModelMatch = schemaContent.match(/model User \{([^}]+)\}/s);
-      expect(userModelMatch).not.toBeNull();
-      // "String?" 타입이어야 하며, "String " (non-nullable) 이어서는 안 된다
-      expect(userModelMatch![1]).toMatch(/passwordHash\s+String\?/);
-    });
-
     it('should have email field as nullable (String?)', () => {
-      // email은 OIDC id_token의 email claim을 저장하는 선택적 필드이다
+      // email은 authentik에서 전달받는 선택적 필드이다
       const userModelMatch = schemaContent.match(/model User \{([^}]+)\}/s);
       expect(userModelMatch).not.toBeNull();
       expect(userModelMatch![1]).toContain('email');
       expect(userModelMatch![1]).toMatch(/email\s+String\?/);
     });
 
-    it('should have oidcSub field as nullable unique (String? @unique)', () => {
-      // oidcSub는 OIDC subject identifier로 auto-provisioning의 키이며 unique해야 한다
+    it('should NOT have oidcSub field (replaced by authentikUid in Forward Auth migration)', () => {
+      // oidcSub는 제거되고 authentikUid로 대체된다
       const userModelMatch = schemaContent.match(/model User \{([^}]+)\}/s);
       expect(userModelMatch).not.toBeNull();
-      expect(userModelMatch![1]).toContain('oidcSub');
-      expect(userModelMatch![1]).toMatch(/oidcSub\s+String\?.*@unique|oidcSub\s+String\?/);
-      expect(userModelMatch![1]).toMatch(/oidcSub.*@unique|@unique.*oidcSub/);
+      expect(userModelMatch![1]).not.toContain('oidcSub');
+    });
+
+    it('should have authentikUid field as unique (String @unique)', () => {
+      // authentikUid는 Forward Auth 헤더(X-Authentik-UID)에서 전달받는 필드이며
+      // 사용자 식별의 primary key이므로 unique이어야 한다
+      const userModelMatch = schemaContent.match(/model User \{([^}]+)\}/s);
+      expect(userModelMatch).not.toBeNull();
+      expect(userModelMatch![1]).toContain('authentikUid');
+      expect(userModelMatch![1]).toMatch(/authentikUid.*@unique|@unique.*authentikUid/);
     });
   });
 

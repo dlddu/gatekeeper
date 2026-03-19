@@ -208,12 +208,6 @@ describe('app/requests/[id]/page.tsx — UI 요구사항 정적 분석', () => {
       expect(source).toContain('PATCH');
     });
 
-    it('JWT Bearer 토큰을 Authorization 헤더로 전송하는 로직이 포함되어야 한다', () => {
-      // Assert — Authorization 헤더 또는 Bearer 토큰 패턴
-      const hasAuthorization = source.includes('Authorization');
-      const hasBearer = source.includes('Bearer');
-      expect(hasAuthorization && hasBearer).toBe(true);
-    });
   });
 
   // ----------------------------------------------------------------
@@ -274,16 +268,11 @@ describe('app/requests/[id]/page.tsx — UI 요구사항 정적 분석', () => {
   // ----------------------------------------------------------------
   // 2-9. 인증 처리
   // ----------------------------------------------------------------
-  describe('인증 처리', () => {
-    it('localStorage에서 JWT 토큰을 읽는 로직이 포함되어야 한다', () => {
-      // Assert — 기존 요청 목록 페이지와 동일한 패턴
-      expect(source).toContain('localStorage');
-      expect(source).toContain('token');
-    });
-
-    it('토큰이 없는 경우 /login으로 리다이렉트하는 로직이 포함되어야 한다', () => {
-      // Assert
-      expect(source).toContain('/login');
+  describe('인증 처리 (Forward Auth)', () => {
+    it('localStorage 기반 JWT 인증 로직이 제거되어야 한다 (Forward Auth 전환)', () => {
+      // Forward Auth에서는 Traefik이 인증을 처리하므로 클라이언트 측 JWT 로직 불필요
+      expect(source).not.toContain('localStorage');
+      expect(source).not.toContain('/login');
     });
   });
 

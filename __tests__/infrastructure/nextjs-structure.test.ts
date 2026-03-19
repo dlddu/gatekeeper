@@ -80,9 +80,9 @@ describe('Next.js 15 project structure', () => {
       expect(devDeps['@types/jest']).toBeDefined();
     });
 
-    it('should have jose as a dependency', () => {
+    it('should NOT have jose as a dependency (removed with auth in Forward Auth migration)', () => {
       const deps = pkg.dependencies as Record<string, string>;
-      expect(deps['jose']).toBeDefined();
+      expect(deps['jose']).toBeUndefined();
     });
 
     it('should have prisma as a dependency', () => {
@@ -95,11 +95,16 @@ describe('Next.js 15 project structure', () => {
       expect(deps['@prisma/client']).toBeDefined();
     });
 
-    it('should have bcryptjs as a dependency (not bcrypt)', () => {
+    it('should NOT have bcryptjs as a dependency (removed with password auth in Forward Auth migration)', () => {
       const deps = pkg.dependencies as Record<string, string>;
-      expect(deps['bcryptjs']).toBeDefined();
-      // 네이티브 바이너리 문제를 방지하기 위해 bcrypt 대신 bcryptjs 사용
-      expect(deps['bcrypt']).toBeUndefined();
+      expect(deps['bcryptjs']).toBeUndefined();
+    });
+
+    it('should NOT have @types/bcryptjs as a dependency (removed with bcryptjs)', () => {
+      const deps = pkg.dependencies as Record<string, string>;
+      const devDeps = pkg.devDependencies as Record<string, string>;
+      expect(deps['@types/bcryptjs']).toBeUndefined();
+      expect(devDeps['@types/bcryptjs']).toBeUndefined();
     });
 
     it('should have test script defined', () => {
@@ -185,8 +190,12 @@ describe('Next.js 15 project structure', () => {
       expect(fs.existsSync(path.join(ROOT, 'lib'))).toBe(true);
     });
 
-    it('should contain auth.ts', () => {
-      expect(fs.existsSync(path.join(ROOT, 'lib', 'auth.ts'))).toBe(true);
+    it('should NOT contain auth.ts (deleted in Forward Auth migration)', () => {
+      expect(fs.existsSync(path.join(ROOT, 'lib', 'auth.ts'))).toBe(false);
+    });
+
+    it('should NOT contain oidc.ts (deleted in Forward Auth migration)', () => {
+      expect(fs.existsSync(path.join(ROOT, 'lib', 'oidc.ts'))).toBe(false);
     });
 
     it('should contain prisma.ts', () => {

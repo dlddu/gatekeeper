@@ -1,7 +1,6 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { useRouter } from 'next/navigation';
 import HistoryCardList from '@/components/HistoryCardList';
 import BottomNav from '@/components/BottomNav';
 
@@ -16,7 +15,6 @@ interface HistoryItem {
 }
 
 export default function HistoryPage() {
-  const router = useRouter();
   const [items, setItems] = useState<HistoryItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -25,26 +23,9 @@ export default function HistoryPage() {
   const [nextCursor, setNextCursor] = useState<string | null>(null);
 
   useEffect(() => {
-    const token = localStorage.getItem('token');
-    if (!token) {
-      router.push('/login');
-      return;
-    }
-
     async function fetchHistory() {
-      const token = localStorage.getItem('token');
       try {
-        const response = await fetch('/api/me/requests/history', {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        });
-
-        if (response.status === 401) {
-          localStorage.removeItem('token');
-          router.push('/login');
-          return;
-        }
+        const response = await fetch('/api/me/requests/history');
 
         if (!response.ok) {
           setError('이력을 불러올 수 없습니다');
@@ -63,26 +44,15 @@ export default function HistoryPage() {
     }
 
     fetchHistory();
-  }, [router]);
+  }, []);
 
   async function handleLoadMore() {
     if (!nextCursor || isLoadingMore) return;
     setIsLoadingMore(true);
 
-    const token = localStorage.getItem('token');
     try {
       const url = `/api/me/requests/history?cursor=${encodeURIComponent(nextCursor)}`;
-      const response = await fetch(url, {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      });
-
-      if (response.status === 401) {
-        localStorage.removeItem('token');
-        router.push('/login');
-        return;
-      }
+      const response = await fetch(url);
 
       if (!response.ok) {
         setError('이력을 불러올 수 없습니다');
@@ -150,20 +120,8 @@ export default function HistoryPage() {
               onClick={() => {
                 setError(null);
                 setIsLoading(true);
-                const token = localStorage.getItem('token');
-                if (!token) {
-                  router.push('/login');
-                  return;
-                }
-                fetch('/api/me/requests/history', {
-                  headers: { Authorization: `Bearer ${token}` },
-                })
+                fetch('/api/me/requests/history')
                   .then(async (res) => {
-                    if (res.status === 401) {
-                      localStorage.removeItem('token');
-                      router.push('/login');
-                      return;
-                    }
                     if (!res.ok) {
                       setError('이력을 불러올 수 없습니다');
                       return;

@@ -205,6 +205,8 @@ describe('k8s/ directory', () => {
 
 // ----------------------------------------------------------------
 // playwright.config.ts - webServer.env 검증
+// DLD-828: OIDC 환경변수 제거됨. Forward Auth 방식 검증은
+// __tests__/infrastructure/playwright-config.test.ts 에서 담당.
 // ----------------------------------------------------------------
 describe('playwright.config.ts', () => {
   const PLAYWRIGHT_CONFIG_PATH = path.join(process.cwd(), 'playwright.config.ts');
@@ -218,38 +220,29 @@ describe('playwright.config.ts', () => {
     expect(fs.existsSync(PLAYWRIGHT_CONFIG_PATH)).toBe(true);
   });
 
-  describe('webServer.env OIDC test variables', () => {
-    it('should define OIDC_ISSUER in webServer.env', () => {
-      expect(content).toContain('OIDC_ISSUER');
+  describe('webServer.env Forward Auth 설정', () => {
+    it('should NOT define OIDC_ISSUER in webServer.env (removed in Forward Auth migration)', () => {
+      expect(content).not.toContain('OIDC_ISSUER');
     });
 
-    it('should define OIDC_CLIENT_ID in webServer.env', () => {
-      expect(content).toContain('OIDC_CLIENT_ID');
+    it('should NOT define OIDC_CLIENT_ID in webServer.env (removed in Forward Auth migration)', () => {
+      expect(content).not.toContain('OIDC_CLIENT_ID');
     });
 
-    it('should define OIDC_CLIENT_SECRET in webServer.env', () => {
-      expect(content).toContain('OIDC_CLIENT_SECRET');
+    it('should NOT define OIDC_CLIENT_SECRET in webServer.env (removed in Forward Auth migration)', () => {
+      expect(content).not.toContain('OIDC_CLIENT_SECRET');
     });
 
-    it('should define OIDC_REDIRECT_URI in webServer.env', () => {
-      expect(content).toContain('OIDC_REDIRECT_URI');
+    it('should NOT define OIDC_REDIRECT_URI in webServer.env (removed in Forward Auth migration)', () => {
+      expect(content).not.toContain('OIDC_REDIRECT_URI');
     });
 
-    it('should set OIDC_ISSUER as a key-value pair inside webServer.env block', () => {
-      // webServer 블록 안에서 OIDC_ISSUER: '...' 형태로 존재해야 함
-      expect(content).toMatch(/webServer[\s\S]*?env[\s\S]*?OIDC_ISSUER\s*:/);
+    it('should define E2E_FORWARD_AUTH_USER in webServer.env', () => {
+      expect(content).toContain('E2E_FORWARD_AUTH_USER');
     });
 
-    it('should set OIDC_CLIENT_ID as a key-value pair inside webServer.env block', () => {
-      expect(content).toMatch(/webServer[\s\S]*?env[\s\S]*?OIDC_CLIENT_ID\s*:/);
-    });
-
-    it('should set OIDC_CLIENT_SECRET as a key-value pair inside webServer.env block', () => {
-      expect(content).toMatch(/webServer[\s\S]*?env[\s\S]*?OIDC_CLIENT_SECRET\s*:/);
-    });
-
-    it('should set OIDC_REDIRECT_URI as a key-value pair inside webServer.env block', () => {
-      expect(content).toMatch(/webServer[\s\S]*?env[\s\S]*?OIDC_REDIRECT_URI\s*:/);
+    it('should set E2E_FORWARD_AUTH_USER as a key-value pair inside webServer.env block', () => {
+      expect(content).toMatch(/webServer[\s\S]*?env[\s\S]*?E2E_FORWARD_AUTH_USER\s*:/);
     });
   });
 });

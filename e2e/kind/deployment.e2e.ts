@@ -49,6 +49,7 @@ test.describe('회원가입 및 인증', () => {
 
   test('POST /api/auth/signup 엔드포인트가 제거되었다 (404)', async ({ request }) => {
     const response = await request.post('/api/auth/signup', {
+      headers: { 'x-authentik-uid': authentikUid },
       data: {
         username: 'any-user',
         password: 'anypass123',

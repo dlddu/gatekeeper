@@ -86,4 +86,5 @@ describe('middleware.ts', () => {
       expect(middlewareContent).toContain('matcher');
     });
   });
+
 });

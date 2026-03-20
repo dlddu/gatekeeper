@@ -1,11 +1,11 @@
 /**
  * playwright.config.ts 설정 검증 테스트
  *
- * DLD-795: e2e global-setup에 OIDC Mock 서버 통합
+ * DLD-828: Forward Auth 방식으로 전환 후 playwright.config.ts 정리
  *
  * 검증 범위:
- * - webServer.env.OIDC_ISSUER가 mock 서버 URL(http://localhost:9999)을 가리키는지 여부
- * - webServer.env.OIDC_CLIENT_ID, OIDC_CLIENT_SECRET이 설정되어 있는지 여부
+ * - webServer.env에서 OIDC 관련 환경변수가 제거되었는지 여부
+ * - webServer.env에서 JWT_SECRET이 제거되었는지 여부
  * - globalSetup, globalTeardown 경로가 올바르게 설정되어 있는지 여부
  *
  * 참고:
@@ -41,55 +41,55 @@ import playwrightConfig from '../../playwright.config';
 
 describe('playwright.config.ts', () => {
   // ----------------------------------------------------------------
-  // OIDC 환경변수 설정
+  // Forward Auth 환경변수 설정
   // ----------------------------------------------------------------
-  describe('webServer.env — OIDC 설정', () => {
+  describe('webServer.env — Forward Auth 설정', () => {
     it('webServer.env가 정의되어 있어야 한다', () => {
       // Assert
       expect(playwrightConfig.webServer).toBeDefined();
       expect((playwrightConfig.webServer as { env?: Record<string, string> }).env).toBeDefined();
     });
 
-    it('OIDC_ISSUER가 http://localhost:9999로 설정되어 있어야 한다', () => {
+    it('OIDC_ISSUER가 webServer.env에 없어야 한다', () => {
       // Arrange
       const env = (playwrightConfig.webServer as { env: Record<string, string> }).env;
 
       // Assert
-      expect(env.OIDC_ISSUER).toBe('http://localhost:9999');
+      expect(env).not.toHaveProperty('OIDC_ISSUER');
     });
 
-    it('OIDC_CLIENT_ID가 설정되어 있어야 한다', () => {
+    it('OIDC_CLIENT_ID가 webServer.env에 없어야 한다', () => {
       // Arrange
       const env = (playwrightConfig.webServer as { env: Record<string, string> }).env;
 
       // Assert
-      expect(env.OIDC_CLIENT_ID).toBeDefined();
-      expect(typeof env.OIDC_CLIENT_ID).toBe('string');
-      expect(env.OIDC_CLIENT_ID.length).toBeGreaterThan(0);
+      expect(env).not.toHaveProperty('OIDC_CLIENT_ID');
     });
 
-    it('OIDC_CLIENT_SECRET이 설정되어 있어야 한다', () => {
+    it('OIDC_CLIENT_SECRET가 webServer.env에 없어야 한다', () => {
       // Arrange
       const env = (playwrightConfig.webServer as { env: Record<string, string> }).env;
 
       // Assert
-      expect(env.OIDC_CLIENT_SECRET).toBeDefined();
-      expect(typeof env.OIDC_CLIENT_SECRET).toBe('string');
-      expect(env.OIDC_CLIENT_SECRET.length).toBeGreaterThan(0);
+      expect(env).not.toHaveProperty('OIDC_CLIENT_SECRET');
     });
 
-    it('OIDC_ISSUER URL이 유효한 localhost URL 형식이어야 한다', () => {
+    it('OIDC_REDIRECT_URI가 webServer.env에 없어야 한다', () => {
       // Arrange
       const env = (playwrightConfig.webServer as { env: Record<string, string> }).env;
 
-      // Act — URL 파싱으로 유효성 확인
-      const issuerUrl = new URL(env.OIDC_ISSUER);
+      // Assert
+      expect(env).not.toHaveProperty('OIDC_REDIRECT_URI');
+    });
+
+    it('JWT_SECRET이 webServer.env에 없어야 한다', () => {
+      // Arrange
+      const env = (playwrightConfig.webServer as { env: Record<string, string> }).env;
 
       // Assert
-      expect(issuerUrl.hostname).toBe('localhost');
-      expect(issuerUrl.port).toBe('9999');
-      expect(issuerUrl.protocol).toBe('http:');
+      expect(env).not.toHaveProperty('JWT_SECRET');
     });
+
   });
 
   // ----------------------------------------------------------------

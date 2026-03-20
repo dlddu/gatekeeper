@@ -73,7 +73,6 @@ export default defineConfig({
     env: {
       // 테스트 전용 SQLite DB 사용
       DATABASE_URL: `file:${testDBPath}`,
-      JWT_SECRET: 'e2e-test-secret-key-must-be-at-least-32-chars!!',
       API_SECRET_KEY: 'e2e-test-api-key-valid',
       NEXT_PUBLIC_VAPID_PUBLIC_KEY: 'BEl62iUYgUivxIkv69yViEuiBIa-Ib9-SkvMeAtA3LFgDzkrxZJjSgSnfckjBJuBkr3qBUYIHBQFLXYp5Nksh8U',
       VAPID_PUBLIC_KEY: 'BEl62iUYgUivxIkv69yViEuiBIa-Ib9-SkvMeAtA3LFgDzkrxZJjSgSnfckjBJuBkr3qBUYIHBQFLXYp5Nksh8U',
@@ -81,10 +80,6 @@ export default defineConfig({
       VAPID_SUBJECT: 'mailto:e2e-test@example.com',
       NODE_ENV: 'production',
       PORT: '3001',
-      OIDC_ISSUER: 'http://localhost:9999',
-      OIDC_CLIENT_ID: 'test-client',
-      OIDC_CLIENT_SECRET: 'test-secret',
-      OIDC_REDIRECT_URI: 'http://localhost:3001/api/auth/oidc/callback',
     },
   },
 });

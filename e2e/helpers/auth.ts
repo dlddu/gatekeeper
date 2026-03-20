@@ -69,6 +69,27 @@ export async function loginAsTestUser(_request: APIRequestContext): Promise<Auth
 }
 
 /**
+ * TEST_USERS 객체의 사용자 정보로 Forward Auth 헤더 생성
+ *
+ * DLD-827: 기존 loginAsAdmin(request) + withAuthHeader(auth.authentikUid) 2단계 호출을
+ * forwardAuthHeaders(TEST_USERS.admin) 1단계 호출로 대체합니다.
+ *
+ * 사용 예:
+ *   const response = await request.patch(`/api/requests/${id}/approve`, forwardAuthHeaders(TEST_USERS.admin));
+ */
+export function forwardAuthHeaders(
+  user: typeof TEST_USERS[keyof typeof TEST_USERS]
+): { headers: Record<string, string> } {
+  return {
+    headers: {
+      'x-authentik-uid': user.authentikUid,
+      'x-authentik-username': user.username,
+      'x-authentik-email': user.email,
+    },
+  };
+}
+
+/**
  * 브라우저에서 프로그래매틱하게 인증 설정
  */
 export async function loginViaAPI(

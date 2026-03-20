@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test';
-import { loginAsAdmin, withAuthHeader } from './helpers/auth';
+import { loginAsAdmin, withAuthHeader, forwardAuthHeaders, TEST_USERS } from './helpers/auth';
 import { cleanupTestData, createTestRequest } from './helpers/db';
 
 /**
@@ -646,5 +646,236 @@ test.describe('GET /api/requests/:id (요청 상태 polling)', () => {
 
     const body = await response.json();
     expect(body).toHaveProperty('error');
+  });
+});
+
+// TODO: Activate when DLD-827 is implemented
+test.describe.skip('PATCH /api/requests/:id/approve — Forward Auth 전환 (DLD-827)', () => {
+  /**
+   * DLD-827: Forward Auth 기반 인증으로 전환
+   *
+   * 기존 loginAsAdmin(request) + withAuthHeader(auth.authentikUid) 2단계 호출을
+   * forwardAuthHeaders(TEST_USERS.admin) 1단계 호출로 대체합니다.
+   *
+   * 검증 항목:
+   * - Forward Auth 헤더만으로 승인 처리가 성공함
+   * - 응답 body의 processedById에 인증된 사용자의 내부 DB ID가 기록됨
+   */
+
+  const createdExternalIds: string[] = [];
+
+  test.afterEach(async () => {
+    await cleanupTestData(createdExternalIds.splice(0));
+  });
+
+  test('Forward Auth 헤더로 PENDING 요청을 승인하면 200과 APPROVED 상태를 반환한다 (happy path)', async ({
+    request,
+  }) => {
+    // Arrange: PENDING Request 생성
+    const externalId = `e2e-fa-approve-${Date.now()}`;
+    createdExternalIds.push(externalId);
+
+    const createResponse = await request.post('/api/requests', {
+      ...withApiKeyHeader(),
+      data: {
+        externalId,
+        context: 'Forward Auth 승인 전환 테스트용 요청',
+        requesterName: 'E2E Bot',
+      },
+    });
+    expect(createResponse.status()).toBe(201);
+    const created = await createResponse.json();
+
+    // Act: Forward Auth 헤더로 승인 (1단계 호출)
+    const approveResponse = await request.patch(
+      `/api/requests/${created.id}/approve`,
+      forwardAuthHeaders(TEST_USERS.admin)
+    );
+
+    // Assert
+    expect(approveResponse.status()).toBe(200);
+    const body = await approveResponse.json();
+    expect(body.status).toBe('APPROVED');
+    expect(body.processedAt).toBeTruthy();
+  });
+
+  test('승인 후 processedById에 Forward Auth 헤더의 사용자 ID가 기록된다 (happy path)', async ({
+    request,
+  }) => {
+    // Arrange: PENDING Request 생성
+    const externalId = `e2e-fa-approve-uid-${Date.now()}`;
+    createdExternalIds.push(externalId);
+
+    const createResponse = await request.post('/api/requests', {
+      ...withApiKeyHeader(),
+      data: {
+        externalId,
+        context: 'processedById 검증용 요청',
+        requesterName: 'E2E Bot',
+      },
+    });
+    expect(createResponse.status()).toBe(201);
+    const created = await createResponse.json();
+
+    // Act: Forward Auth 헤더로 승인
+    const approveResponse = await request.patch(
+      `/api/requests/${created.id}/approve`,
+      forwardAuthHeaders(TEST_USERS.admin)
+    );
+
+    expect(approveResponse.status()).toBe(200);
+    const body = await approveResponse.json();
+
+    // Assert: processedById가 null이 아닌 실제 사용자 ID임을 검증
+    expect(body.processedById).toBeTruthy();
+    expect(typeof body.processedById).toBe('string');
+  });
+
+  test('Bearer 토큰 없이 Forward Auth 헤더만으로 승인이 처리된다 (edge case)', async ({
+    request,
+  }) => {
+    // Arrange: PENDING Request 생성
+    const externalId = `e2e-fa-approve-nobearer-${Date.now()}`;
+    createdExternalIds.push(externalId);
+
+    const createResponse = await request.post('/api/requests', {
+      ...withApiKeyHeader(),
+      data: {
+        externalId,
+        context: 'Bearer 토큰 미사용 승인 테스트용 요청',
+        requesterName: 'E2E Bot',
+      },
+    });
+    expect(createResponse.status()).toBe(201);
+    const created = await createResponse.json();
+
+    // Act: Authorization 헤더 없이 Forward Auth 헤더만으로 승인
+    // forwardAuthHeaders는 x-authentik-* 헤더만 포함하며 Authorization 헤더를 포함하지 않음
+    const approveResponse = await request.patch(
+      `/api/requests/${created.id}/approve`,
+      forwardAuthHeaders(TEST_USERS.admin)
+    );
+
+    // Assert: Bearer 토큰 없이도 Forward Auth 헤더만으로 승인 성공
+    expect(approveResponse.status()).toBe(200);
+    const body = await approveResponse.json();
+    expect(body.status).toBe('APPROVED');
+  });
+
+  test('Forward Auth 헤더 없이 승인 요청하면 401을 반환한다 (error case)', async ({ request }) => {
+    const listResponse = await request.get('/api/requests?status=PENDING');
+    const list = await listResponse.json();
+    const pendingRequest = list[0];
+
+    if (!pendingRequest) {
+      test.skip();
+      return;
+    }
+
+    // Act: 인증 헤더 없이 승인 시도
+    const response = await request.patch(`/api/requests/${pendingRequest.id}/approve`);
+
+    // Assert
+    expect(response.status()).toBe(401);
+  });
+});
+
+// TODO: Activate when DLD-827 is implemented
+test.describe.skip('PATCH /api/requests/:id/reject — Forward Auth 전환 (DLD-827)', () => {
+  /**
+   * DLD-827: Forward Auth 기반 인증으로 전환
+   *
+   * 기존 loginAsAdmin(request) + withAuthHeader(auth.authentikUid) 2단계 호출을
+   * forwardAuthHeaders(TEST_USERS.admin) 1단계 호출로 대체합니다.
+   *
+   * 검증 항목:
+   * - Forward Auth 헤더만으로 거절 처리가 성공함
+   * - 응답 body의 processedById에 인증된 사용자의 내부 DB ID가 기록됨
+   */
+
+  const createdExternalIds: string[] = [];
+
+  test.afterEach(async () => {
+    await cleanupTestData(createdExternalIds.splice(0));
+  });
+
+  test('Forward Auth 헤더로 PENDING 요청을 거절하면 200과 REJECTED 상태를 반환한다 (happy path)', async ({
+    request,
+  }) => {
+    // Arrange: PENDING Request 생성
+    const externalId = `e2e-fa-reject-${Date.now()}`;
+    createdExternalIds.push(externalId);
+
+    const createResponse = await request.post('/api/requests', {
+      ...withApiKeyHeader(),
+      data: {
+        externalId,
+        context: 'Forward Auth 거절 전환 테스트용 요청',
+        requesterName: 'E2E Bot',
+      },
+    });
+    expect(createResponse.status()).toBe(201);
+    const created = await createResponse.json();
+
+    // Act: Forward Auth 헤더로 거절 (1단계 호출)
+    const rejectResponse = await request.patch(
+      `/api/requests/${created.id}/reject`,
+      forwardAuthHeaders(TEST_USERS.admin)
+    );
+
+    // Assert
+    expect(rejectResponse.status()).toBe(200);
+    const body = await rejectResponse.json();
+    expect(body.status).toBe('REJECTED');
+    expect(body.processedAt).toBeTruthy();
+  });
+
+  test('거절 후 processedById에 Forward Auth 헤더의 사용자 ID가 기록된다 (happy path)', async ({
+    request,
+  }) => {
+    // Arrange: PENDING Request 생성
+    const externalId = `e2e-fa-reject-uid-${Date.now()}`;
+    createdExternalIds.push(externalId);
+
+    const createResponse = await request.post('/api/requests', {
+      ...withApiKeyHeader(),
+      data: {
+        externalId,
+        context: 'processedById 거절 검증용 요청',
+        requesterName: 'E2E Bot',
+      },
+    });
+    expect(createResponse.status()).toBe(201);
+    const created = await createResponse.json();
+
+    // Act: Forward Auth 헤더로 거절
+    const rejectResponse = await request.patch(
+      `/api/requests/${created.id}/reject`,
+      forwardAuthHeaders(TEST_USERS.admin)
+    );
+
+    expect(rejectResponse.status()).toBe(200);
+    const body = await rejectResponse.json();
+
+    // Assert: processedById가 null이 아닌 실제 사용자 ID임을 검증
+    expect(body.processedById).toBeTruthy();
+    expect(typeof body.processedById).toBe('string');
+  });
+
+  test('Forward Auth 헤더 없이 거절 요청하면 401을 반환한다 (error case)', async ({ request }) => {
+    const listResponse = await request.get('/api/requests?status=PENDING');
+    const list = await listResponse.json();
+    const pendingRequest = list[0];
+
+    if (!pendingRequest) {
+      test.skip();
+      return;
+    }
+
+    // Act: 인증 헤더 없이 거절 시도
+    const response = await request.patch(`/api/requests/${pendingRequest.id}/reject`);
+
+    // Assert
+    expect(response.status()).toBe(401);
   });
 });

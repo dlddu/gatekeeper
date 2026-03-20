@@ -22,6 +22,10 @@ import { setupPushMocks, mockPushSubscriptionRoutes, MOCK_PUSH_SUBSCRIPTION } fr
  * Activated for DLD-661
  */
 
+// 글로벌 시드 데이터의 externalId (global-setup.ts에서 생성)
+const SEED_PENDING_EXTERNAL_ID = 'e2e-pending-001';
+const SEED_TIMEOUT_EXTERNAL_ID = 'e2e-timeout-001';
+
 test.describe('POST /api/me/push/subscribe (Push 구독 API)', () => {
   test('유효한 구독 정보로 등록하면 201을 반환한다 (happy path)', async ({ request }) => {
     const { authentikUid } = await loginAsAdmin(request);
@@ -404,7 +408,7 @@ test.describe.skip('GET /api/me/requests/:id — Forward Auth 전환 (DLD-827)',
     const requests = await listResponse.json();
 
     const targetRequest = requests.find(
-      (r: { externalId: string }) => r.externalId === 'e2e-pending-001'
+      (r: { externalId: string }) => r.externalId === SEED_PENDING_EXTERNAL_ID
     );
     expect(targetRequest).toBeDefined();
 
@@ -419,7 +423,7 @@ test.describe.skip('GET /api/me/requests/:id — Forward Auth 전환 (DLD-827)',
 
     const body = await response.json();
     expect(body.id).toBe(targetRequest.id);
-    expect(body.externalId).toBe('e2e-pending-001');
+    expect(body.externalId).toBe(SEED_PENDING_EXTERNAL_ID);
   });
 
   test('Forward Auth 헤더로 조회한 요청에 expiresAt 필드가 포함된다 (happy path)', async ({
@@ -430,7 +434,7 @@ test.describe.skip('GET /api/me/requests/:id — Forward Auth 전환 (DLD-827)',
     const requests = await listResponse.json();
 
     const targetRequest = requests.find(
-      (r: { externalId: string }) => r.externalId === 'e2e-timeout-001'
+      (r: { externalId: string }) => r.externalId === SEED_TIMEOUT_EXTERNAL_ID
     );
 
     if (!targetRequest) {

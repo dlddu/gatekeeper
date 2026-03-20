@@ -1,6 +1,6 @@
 import { test, expect } from '@playwright/test';
 import { loginAsAdmin, withAuthHeader, forwardAuthHeaders, TEST_USERS } from './helpers/auth';
-import { cleanupTestData, createTestRequest } from './helpers/db';
+import { cleanupTestData, createTestPrismaClient, createTestRequest } from './helpers/db';
 
 /**
  * Request API E2E 테스트
@@ -729,6 +729,19 @@ test.describe.skip('PATCH /api/requests/:id/approve — Forward Auth 전환 (DLD
     // Assert: processedById가 null이 아닌 실제 사용자 ID임을 검증
     expect(body.processedById).toBeTruthy();
     expect(typeof body.processedById).toBe('string');
+
+    // Assert: Forward Auth 헤더의 authentikUid로 조회한 사용자의 내부 ID와 일치해야 함
+    const prisma = await createTestPrismaClient();
+    try {
+      const user = await prisma.user.findUnique({
+        where: { authentikUid: TEST_USERS.admin.authentikUid },
+        select: { id: true },
+      });
+      expect(user).not.toBeNull();
+      expect(body.processedById).toBe(user?.id);
+    } finally {
+      await prisma.$disconnect();
+    }
   });
 
   test('Bearer 토큰 없이 Forward Auth 헤더만으로 승인이 처리된다 (edge case)', async ({
@@ -860,6 +873,19 @@ test.describe.skip('PATCH /api/requests/:id/reject — Forward Auth 전환 (DLD-
     // Assert: processedById가 null이 아닌 실제 사용자 ID임을 검증
     expect(body.processedById).toBeTruthy();
     expect(typeof body.processedById).toBe('string');
+
+    // Assert: Forward Auth 헤더의 authentikUid로 조회한 사용자의 내부 ID와 일치해야 함
+    const prisma = await createTestPrismaClient();
+    try {
+      const user = await prisma.user.findUnique({
+        where: { authentikUid: TEST_USERS.admin.authentikUid },
+        select: { id: true },
+      });
+      expect(user).not.toBeNull();
+      expect(body.processedById).toBe(user?.id);
+    } finally {
+      await prisma.$disconnect();
+    }
   });
 
   test('Forward Auth 헤더 없이 거절 요청하면 401을 반환한다 (error case)', async ({ request }) => {

@@ -20,16 +20,6 @@ export async function middleware(request: NextRequest): Promise<NextResponse> {
     return NextResponse.next();
   }
 
-  // E2E 테스트 환경: Forward Auth 헤더를 자동 주입 (프로덕션에서는 절대 실행되지 않음)
-  const e2eUser = process.env.E2E_FORWARD_AUTH_USER;
-  if (e2eUser && process.env.NODE_ENV !== 'production') {
-    const requestHeaders = new Headers(request.headers);
-    requestHeaders.set('x-authentik-uid', e2eUser);
-    return NextResponse.next({
-      request: { headers: requestHeaders },
-    });
-  }
-
   // Forward Auth 환경: Traefik이 인증을 처리하므로 요청을 그대로 통과
   return NextResponse.next();
 }

@@ -20,7 +20,14 @@ export async function middleware(request: NextRequest): Promise<NextResponse> {
     return NextResponse.next();
   }
 
-  // Forward Auth 환경: Traefik이 인증을 처리하므로 요청을 그대로 통과
+  // /api/* 경로에서는 x-authentik-uid 헤더 존재 여부 확인
+  if (pathname.startsWith('/api/')) {
+    const authentikUid = request.headers.get('x-authentik-uid');
+    if (!authentikUid) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+  }
+
   return NextResponse.next();
 }
 

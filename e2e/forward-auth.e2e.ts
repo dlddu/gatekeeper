@@ -5,7 +5,7 @@ import { findUserByUsername, deleteTestUser } from './helpers/db';
 /**
  * Forward Auth 사용자 식별 E2E 테스트
  *
- * DLD-829: 작업 2-1: [Forward Auth 사용자 식별] e2e 테스트 작성 (skipped)
+ * DLD-830: 작업 2-2: [Forward Auth 사용자 식별] 구현 완료
  * 부모 이슈: DLD-645 (Gatekeeper — 승인 게이트웨이 서비스)
  *
  * 커버리지:
@@ -13,12 +13,9 @@ import { findUserByUsername, deleteTestUser } from './helpers/db';
  * - auto-provisioning: 최초 요청 시 사용자 자동 생성
  * - 기존 사용자 재요청 시 동일 사용자 반환
  * - X-authentik-email 변경 시 email 필드 업데이트
- *
- * TODO: DLD-830 구현 완료 후 test.describe.skip → test.describe 로 변경
  */
 
-// TODO: DLD-830 구현 완료 후 test.describe.skip → test.describe 로 변경
-test.describe.skip('GET /api/me (Forward Auth 사용자 식별)', () => {
+test.describe('GET /api/me (Forward Auth 사용자 식별)', () => {
   test('Forward Auth 헤더 포함 요청 시 200과 사용자 정보를 반환한다 (happy path)', async ({
     request,
   }) => {

@@ -35,11 +35,6 @@ spec:
               value: "production"
             - name: DATABASE_URL
               value: "file:/app/data/gatekeeper.db"
-            - name: JWT_SECRET
-              valueFrom:
-                secretKeyRef:
-                  name: gatekeeper-secrets
-                  key: JWT_SECRET
             - name: VAPID_PUBLIC_KEY
               valueFrom:
                 secretKeyRef:
@@ -60,26 +55,6 @@ spec:
                 secretKeyRef:
                   name: gatekeeper-secrets
                   key: API_SECRET_KEY
-            - name: OIDC_ISSUER
-              valueFrom:
-                secretKeyRef:
-                  name: gatekeeper-secrets
-                  key: OIDC_ISSUER
-            - name: OIDC_CLIENT_ID
-              valueFrom:
-                secretKeyRef:
-                  name: gatekeeper-secrets
-                  key: OIDC_CLIENT_ID
-            - name: OIDC_CLIENT_SECRET
-              valueFrom:
-                secretKeyRef:
-                  name: gatekeeper-secrets
-                  key: OIDC_CLIENT_SECRET
-            - name: OIDC_REDIRECT_URI
-              valueFrom:
-                secretKeyRef:
-                  name: gatekeeper-secrets
-                  key: OIDC_REDIRECT_URI
           volumeMounts:
             - name: data
               mountPath: /app/data

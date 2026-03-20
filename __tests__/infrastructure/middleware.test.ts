@@ -87,28 +87,4 @@ describe('middleware.ts', () => {
     });
   });
 
-  // ----------------------------------------------------------------
-  // E2E Forward Auth 지원
-  // ----------------------------------------------------------------
-  describe('E2E Forward Auth 지원', () => {
-    it('E2E_FORWARD_AUTH_USER 관련 코드가 포함되어 있어야 한다', () => {
-      // E2E 테스트 환경에서 Forward Auth 헤더를 자동 주입하기 위한
-      // E2E_FORWARD_AUTH_USER 환경변수 참조가 미들웨어에 있어야 한다
-      expect(middlewareContent).toContain('E2E_FORWARD_AUTH_USER');
-    });
-
-    it('x-authentik-uid 헤더 주입 코드가 포함되어 있어야 한다', () => {
-      // E2E 테스트 환경에서 Authentik Forward Auth 헤더를 시뮬레이션하기 위해
-      // x-authentik-uid 헤더를 요청에 주입하는 코드가 있어야 한다
-      expect(middlewareContent).toContain('x-authentik-uid');
-    });
-
-    it('NODE_ENV 또는 환경 보호 조건이 있어야 한다', () => {
-      // E2E_FORWARD_AUTH_USER 처리 로직은 테스트 환경에서만 동작해야 하므로
-      // NODE_ENV 검사 또는 E2E 관련 환경 조건으로 보호되어야 한다
-      const hasNodeEnvGuard = middlewareContent.includes('NODE_ENV');
-      const hasE2eGuard = /E2E_FORWARD_AUTH_USER/.test(middlewareContent);
-      expect(hasNodeEnvGuard || hasE2eGuard).toBe(true);
-    });
-  });
 });

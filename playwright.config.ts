@@ -80,7 +80,6 @@ export default defineConfig({
       VAPID_SUBJECT: 'mailto:e2e-test@example.com',
       NODE_ENV: 'production',
       PORT: '3001',
-      E2E_FORWARD_AUTH_USER: 'e2e-admin-uid-001',
     },
   },
 });

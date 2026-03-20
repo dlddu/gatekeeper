@@ -6,7 +6,6 @@
  * 검증 범위:
  * - webServer.env에서 OIDC 관련 환경변수가 제거되었는지 여부
  * - webServer.env에서 JWT_SECRET이 제거되었는지 여부
- * - webServer.env에 E2E_FORWARD_AUTH_USER가 설정되어 있는지 여부
  * - globalSetup, globalTeardown 경로가 올바르게 설정되어 있는지 여부
  *
  * 참고:
@@ -91,15 +90,6 @@ describe('playwright.config.ts', () => {
       expect(env).not.toHaveProperty('JWT_SECRET');
     });
 
-    it('E2E_FORWARD_AUTH_USER가 webServer.env에 설정되어 있어야 한다', () => {
-      // Arrange
-      const env = (playwrightConfig.webServer as { env: Record<string, string> }).env;
-
-      // Assert
-      expect(env.E2E_FORWARD_AUTH_USER).toBeDefined();
-      expect(typeof env.E2E_FORWARD_AUTH_USER).toBe('string');
-      expect(env.E2E_FORWARD_AUTH_USER.length).toBeGreaterThan(0);
-    });
   });
 
   // ----------------------------------------------------------------

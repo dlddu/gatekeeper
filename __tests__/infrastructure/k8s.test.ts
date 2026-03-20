@@ -237,12 +237,5 @@ describe('playwright.config.ts', () => {
       expect(content).not.toContain('OIDC_REDIRECT_URI');
     });
 
-    it('should define E2E_FORWARD_AUTH_USER in webServer.env', () => {
-      expect(content).toContain('E2E_FORWARD_AUTH_USER');
-    });
-
-    it('should set E2E_FORWARD_AUTH_USER as a key-value pair inside webServer.env block', () => {
-      expect(content).toMatch(/webServer[\s\S]*?env[\s\S]*?E2E_FORWARD_AUTH_USER\s*:/);
-    });
   });
 });

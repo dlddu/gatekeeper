@@ -75,8 +75,8 @@ describe('k8s/ directory', () => {
       expect(content).toContain('DATABASE_URL');
     });
 
-    it('should reference JWT_SECRET secret', () => {
-      expect(content).toContain('JWT_SECRET');
+    it('should NOT reference JWT_SECRET (removed in Forward Auth migration)', () => {
+      expect(content).not.toContain('JWT_SECRET');
     });
 
     it('should reference VAPID_PUBLIC_KEY secret', () => {
@@ -91,46 +91,21 @@ describe('k8s/ directory', () => {
       expect(content).toContain('persistentVolumeClaim');
     });
 
-    describe('OIDC environment variables via secretKeyRef', () => {
-      it('should reference OIDC_ISSUER secret', () => {
-        expect(content).toContain('OIDC_ISSUER');
+    describe('OIDC environment variables (removed in Forward Auth migration)', () => {
+      it('should NOT reference OIDC_ISSUER', () => {
+        expect(content).not.toContain('OIDC_ISSUER');
       });
 
-      it('should reference OIDC_CLIENT_ID secret', () => {
-        expect(content).toContain('OIDC_CLIENT_ID');
+      it('should NOT reference OIDC_CLIENT_ID', () => {
+        expect(content).not.toContain('OIDC_CLIENT_ID');
       });
 
-      it('should reference OIDC_CLIENT_SECRET secret', () => {
-        expect(content).toContain('OIDC_CLIENT_SECRET');
+      it('should NOT reference OIDC_CLIENT_SECRET', () => {
+        expect(content).not.toContain('OIDC_CLIENT_SECRET');
       });
 
-      it('should reference OIDC_REDIRECT_URI secret', () => {
-        expect(content).toContain('OIDC_REDIRECT_URI');
-      });
-
-      it('should inject OIDC_ISSUER via secretKeyRef from gatekeeper-secrets', () => {
-        // name: OIDC_ISSUER 바로 다음에 secretKeyRef 블록이 와야 함
-        expect(content).toMatch(
-          /name:\s+OIDC_ISSUER[\s\S]*?secretKeyRef:\s*\n\s*name:\s+gatekeeper-secrets[\s\S]*?key:\s+OIDC_ISSUER/
-        );
-      });
-
-      it('should inject OIDC_CLIENT_ID via secretKeyRef from gatekeeper-secrets', () => {
-        expect(content).toMatch(
-          /name:\s+OIDC_CLIENT_ID[\s\S]*?secretKeyRef:\s*\n\s*name:\s+gatekeeper-secrets[\s\S]*?key:\s+OIDC_CLIENT_ID/
-        );
-      });
-
-      it('should inject OIDC_CLIENT_SECRET via secretKeyRef from gatekeeper-secrets', () => {
-        expect(content).toMatch(
-          /name:\s+OIDC_CLIENT_SECRET[\s\S]*?secretKeyRef:\s*\n\s*name:\s+gatekeeper-secrets[\s\S]*?key:\s+OIDC_CLIENT_SECRET/
-        );
-      });
-
-      it('should inject OIDC_REDIRECT_URI via secretKeyRef from gatekeeper-secrets', () => {
-        expect(content).toMatch(
-          /name:\s+OIDC_REDIRECT_URI[\s\S]*?secretKeyRef:\s*\n\s*name:\s+gatekeeper-secrets[\s\S]*?key:\s+OIDC_REDIRECT_URI/
-        );
+      it('should NOT reference OIDC_REDIRECT_URI', () => {
+        expect(content).not.toContain('OIDC_REDIRECT_URI');
       });
     });
 

@@ -25,6 +25,9 @@ import { MOCK_PUSH_SUBSCRIPTION } from './helpers/push-mock';
 // API 키 (playwright.config.ts의 webServer.env.API_SECRET_KEY와 동일)
 const E2E_API_KEY = process.env.API_SECRET_KEY ?? 'e2e-test-api-key-valid';
 
+// 존재하지 않는 Push 엔드포인트 (error case 테스트용)
+const NONEXISTENT_PUSH_ENDPOINT = 'https://nonexistent.endpoint.example.com/push/fa-e2e-test';
+
 test.describe('Push 구독 등록 API → DB 저장 확인', () => {
   /**
    * DLD-660: Push 구독 등록 후 Prisma로 DB에서 PushSubscription 레코드가
@@ -669,7 +672,7 @@ test.describe.skip('DELETE /api/me/push/unsubscribe — Forward Auth 전환 (DLD
   });
 
   test('존재하지 않는 endpoint 해제 시 404를 반환한다 (error case)', async ({ request }) => {
-    const nonExistentEndpoint = 'https://nonexistent.endpoint.example.com/push/fa-e2e-test';
+    const nonExistentEndpoint = NONEXISTENT_PUSH_ENDPOINT;
 
     // Act: 존재하지 않는 endpoint로 해제 시도
     const unsubResponse = await request.delete('/api/me/push/unsubscribe', {

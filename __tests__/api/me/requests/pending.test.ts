@@ -11,6 +11,8 @@ jest.mock('@/lib/prisma', () => ({
   prisma: {
     user: {
       findUnique: jest.fn(),
+      update: jest.fn(),
+      create: jest.fn(),
     },
     request: {
       findMany: jest.fn(),
@@ -26,6 +28,8 @@ import { GET } from '@/app/api/me/requests/pending/route';
 import { prisma } from '@/lib/prisma';
 
 const mockUserFindUnique = prisma.user.findUnique as jest.Mock;
+const mockUserUpdate = prisma.user.update as jest.Mock;
+const mockUserCreate = prisma.user.create as jest.Mock;
 const mockRequestFindMany = prisma.request.findMany as jest.Mock;
 const mockRequestUpdate = prisma.request.update as jest.Mock;
 
@@ -60,6 +64,8 @@ const mockUser = { id: 'user-admin', username: 'admin', authentikUid: 'uid-admin
 describe('GET /api/me/requests/pending', () => {
   beforeEach(() => {
     jest.clearAllMocks();
+    mockUserUpdate.mockImplementation(() => Promise.resolve(mockUserFindUnique.mock.results.slice(-1)[0]?.value ?? null));
+    mockUserCreate.mockImplementation(() => Promise.resolve(mockUserFindUnique.mock.results.slice(-1)[0]?.value ?? null));
   });
 
   // ----------------------------------------------------------------

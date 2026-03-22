@@ -649,8 +649,7 @@ test.describe('GET /api/requests/:id (요청 상태 polling)', () => {
   });
 });
 
-// TODO: Activate when DLD-827 is implemented
-test.describe.skip('PATCH /api/requests/:id/approve — Forward Auth 전환 (DLD-827)', () => {
+test.describe('PATCH /api/requests/:id/approve — Forward Auth 전환 (DLD-827)', () => {
   /**
    * DLD-827: Forward Auth 기반 인증으로 전환
    *
@@ -793,8 +792,7 @@ test.describe.skip('PATCH /api/requests/:id/approve — Forward Auth 전환 (DLD
   });
 });
 
-// TODO: Activate when DLD-827 is implemented
-test.describe.skip('PATCH /api/requests/:id/reject — Forward Auth 전환 (DLD-827)', () => {
+test.describe('PATCH /api/requests/:id/reject — Forward Auth 전환 (DLD-827)', () => {
   /**
    * DLD-827: Forward Auth 기반 인증으로 전환
    *

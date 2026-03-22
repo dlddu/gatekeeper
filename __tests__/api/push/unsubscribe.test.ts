@@ -11,6 +11,8 @@ jest.mock('@/lib/prisma', () => ({
   prisma: {
     user: {
       findUnique: jest.fn(),
+      update: jest.fn(),
+      create: jest.fn(),
     },
     pushSubscription: {
       findUnique: jest.fn(),
@@ -26,6 +28,8 @@ import { DELETE } from '@/app/api/me/push/unsubscribe/route';
 import { prisma } from '@/lib/prisma';
 
 const mockUserFindUnique = prisma.user.findUnique as jest.Mock;
+const mockUserUpdate = prisma.user.update as jest.Mock;
+const mockUserCreate = prisma.user.create as jest.Mock;
 const mockPushSubscriptionFindUnique = prisma.pushSubscription.findUnique as jest.Mock;
 const mockPushSubscriptionDelete = prisma.pushSubscription.delete as jest.Mock;
 
@@ -61,6 +65,8 @@ const mockUser = { id: 'user-admin', username: 'admin', authentikUid: 'uid-admin
 describe('DELETE /api/me/push/unsubscribe', () => {
   beforeEach(() => {
     jest.clearAllMocks();
+    mockUserUpdate.mockImplementation(() => Promise.resolve(mockUserFindUnique.mock.results.slice(-1)[0]?.value ?? null));
+    mockUserCreate.mockImplementation(() => Promise.resolve(mockUserFindUnique.mock.results.slice(-1)[0]?.value ?? null));
   });
 
   // ----------------------------------------------------------------

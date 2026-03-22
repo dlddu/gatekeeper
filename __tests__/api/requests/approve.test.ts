@@ -13,6 +13,8 @@ jest.mock('@/lib/prisma', () => ({
   prisma: {
     user: {
       findUnique: jest.fn(),
+      update: jest.fn(),
+      create: jest.fn(),
     },
     request: {
       findUnique: jest.fn(),
@@ -29,6 +31,8 @@ import { prisma } from '@/lib/prisma';
 
 // 타입 캐스팅 헬퍼
 const mockUserFindUnique = prisma.user.findUnique as jest.Mock;
+const mockUserUpdate = prisma.user.update as jest.Mock;
+const mockUserCreate = prisma.user.create as jest.Mock;
 const mockRequestFindUnique = prisma.request.findUnique as jest.Mock;
 const mockRequestUpdate = prisma.request.update as jest.Mock;
 
@@ -72,6 +76,8 @@ const mockUser = { id: 'user-admin', username: 'admin', authentikUid: 'uid-admin
 describe('PATCH /api/requests/:id/approve', () => {
   beforeEach(() => {
     jest.clearAllMocks();
+    mockUserUpdate.mockImplementation(() => Promise.resolve(mockUserFindUnique.mock.results.slice(-1)[0]?.value ?? null));
+    mockUserCreate.mockImplementation(() => Promise.resolve(mockUserFindUnique.mock.results.slice(-1)[0]?.value ?? null));
   });
 
   // ----------------------------------------------------------------

@@ -276,8 +276,7 @@ test.describe('브라우저 Push 모킹 (page.addInitScript + page.route)', () =
   });
 });
 
-// TODO: Activate when DLD-827 is implemented
-test.describe.skip('GET /api/me/requests/pending — Forward Auth 전환 (DLD-827)', () => {
+test.describe('GET /api/me/requests/pending — Forward Auth 전환 (DLD-827)', () => {
   /**
    * DLD-827: Forward Auth 기반 인증으로 전환
    *
@@ -331,8 +330,7 @@ test.describe.skip('GET /api/me/requests/pending — Forward Auth 전환 (DLD-82
   });
 });
 
-// TODO: Activate when DLD-827 is implemented
-test.describe.skip('GET /api/me/requests/history — Forward Auth 전환 (DLD-827)', () => {
+test.describe('GET /api/me/requests/history — Forward Auth 전환 (DLD-827)', () => {
   /**
    * DLD-827: Forward Auth 기반 인증으로 전환
    *
@@ -387,8 +385,7 @@ test.describe.skip('GET /api/me/requests/history — Forward Auth 전환 (DLD-82
   });
 });
 
-// TODO: Activate when DLD-827 is implemented
-test.describe.skip('GET /api/me/requests/:id — Forward Auth 전환 (DLD-827)', () => {
+test.describe('GET /api/me/requests/:id — Forward Auth 전환 (DLD-827)', () => {
   /**
    * DLD-827: Forward Auth 기반 인증으로 전환
    *

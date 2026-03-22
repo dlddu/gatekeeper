@@ -1,18 +1,9 @@
 import { NextRequest } from 'next/server';
 import { prisma } from '@/lib/prisma';
+import { getForwardAuthUser } from '@/lib/forward-auth';
 
 export async function POST(request: NextRequest): Promise<Response> {
-  // Forward Auth: x-authentik-uid 헤더에서 사용자 식별
-  const authentikUid = request.headers.get('x-authentik-uid');
-
-  if (!authentikUid) {
-    return new Response(JSON.stringify({ error: '인증이 필요합니다' }), {
-      status: 401,
-      headers: { 'Content-Type': 'application/json' },
-    });
-  }
-
-  const user = await prisma.user.findUnique({ where: { authentikUid } });
+  const user = await getForwardAuthUser(request);
 
   if (!user) {
     return new Response(JSON.stringify({ error: '인증이 필요합니다' }), {

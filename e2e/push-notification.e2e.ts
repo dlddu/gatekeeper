@@ -444,8 +444,7 @@ test.describe('Push 구독 해제 → DB 삭제 확인', () => {
   });
 });
 
-// TODO: Activate when DLD-827 is implemented
-test.describe.skip('POST /api/me/push/subscribe — Forward Auth 전환 (DLD-827)', () => {
+test.describe('POST /api/me/push/subscribe — Forward Auth 전환 (DLD-827)', () => {
   /**
    * DLD-827: Forward Auth 기반 인증으로 전환
    *
@@ -604,8 +603,7 @@ test.describe.skip('POST /api/me/push/subscribe — Forward Auth 전환 (DLD-827
   });
 });
 
-// TODO: Activate when DLD-827 is implemented
-test.describe.skip('DELETE /api/me/push/unsubscribe — Forward Auth 전환 (DLD-827)', () => {
+test.describe('DELETE /api/me/push/unsubscribe — Forward Auth 전환 (DLD-827)', () => {
   /**
    * DLD-827: Forward Auth 기반 인증으로 전환
    *

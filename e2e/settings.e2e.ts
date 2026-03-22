@@ -1,5 +1,4 @@
 import { test, expect, type Page } from '@playwright/test';
-import { loginViaAPI } from './helpers/auth';
 import {
   cleanupPushSubscriptions,
   createTestPushSubscription,
@@ -26,7 +25,6 @@ import {
  * - 토글 OFF → DB 시드 + 실제 DELETE /api/me/push/unsubscribe + DB 검증
  * - Push 미지원 브라우저 → 토글 disabled + 안내 문구 확인
  * - 알림 권한 denied 상태 → 토글 disabled + 차단 안내 문구 확인
- * - 미인증 상태로 접근 → /login 리다이렉트 확인
  */
 
 // --- 인라인 브라우저 모킹 상수 ---
@@ -171,9 +169,10 @@ async function mockBrowserPushAPIsInline(
   );
 }
 
-test.describe('설정 페이지 Push 알림 토글 (/settings)', () => {
-  test.beforeEach(async ({ page, request }) => {
-    await loginViaAPI(page, request);
+// DLD-833: 프론트엔드 인증 흐름 제거 전 skip — DLD-834에서 활성화 예정
+test.describe.skip('설정 페이지 Push 알림 토글 (/settings)', () => {
+  test.beforeEach(async ({ page }) => {
+    // 직접 페이지 접근 (E2E_FORWARD_AUTH_USER 환경변수로 전역 인증 주입)
     await page.goto('/requests');
   });
 

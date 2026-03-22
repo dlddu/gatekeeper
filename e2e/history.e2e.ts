@@ -1,5 +1,4 @@
 import { test, expect } from '@playwright/test';
-import { loginViaAPI } from './helpers/auth';
 import {
   cleanupTestData,
   createTestRequest,
@@ -27,11 +26,12 @@ import {
  * TODO: DLD-658 구현 완료 후 test.describe.skip → test.describe 로 변경
  */
 
-test.describe('처리 이력 화면 (/history)', () => {
+// DLD-833: 프론트엔드 인증 흐름 제거 전 skip — DLD-834에서 활성화 예정
+test.describe.skip('처리 이력 화면 (/history)', () => {
   const createdExternalIds: string[] = [];
 
-  test.beforeEach(async ({ page, request }) => {
-    await loginViaAPI(page, request);
+  test.beforeEach(async ({ page }) => {
+    // 직접 페이지 접근 (E2E_FORWARD_AUTH_USER 환경변수로 전역 인증 주입)
     await page.goto('/requests');
   });
 

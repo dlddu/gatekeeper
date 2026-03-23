@@ -16,9 +16,9 @@ spec:
         app: gatekeeper
     spec:
       initContainers:
-        - name: prisma-db-push
+        - name: prisma-migrate
           image: ghcr.io/dlddu/gatekeeper:latest
-          command: ["npx", "prisma", "db", "push", "--accept-data-loss"]
+          command: ["sh", "scripts/db-migrate.sh"]
           env:
             - name: DATABASE_URL
               value: "file:/app/data/gatekeeper.db"

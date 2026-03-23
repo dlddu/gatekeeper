@@ -49,5 +49,4 @@ e2e-test.db
 e2e-test.db-wal
 e2e-test.db-shm
 
-# Prisma generated
-prisma/migrations/
+# Prisma generated client (migrations are tracked in version control)

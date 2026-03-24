@@ -6,6 +6,7 @@ import {
   hideAllProcessedRequests,
   restoreProcessedRequests,
 } from './helpers/db';
+import { TEST_USERS } from './helpers/auth';
 
 /**
  * 처리 이력 화면 E2E 테스트
@@ -30,7 +31,12 @@ test.describe('처리 이력 화면 (/history)', () => {
   const createdExternalIds: string[] = [];
 
   test.beforeEach(async ({ page }) => {
-    // 직접 페이지 접근 (E2E_FORWARD_AUTH_USER 환경변수로 전역 인증 주입)
+    await page.setExtraHTTPHeaders({
+      'x-authentik-uid': TEST_USERS.admin.authentikUid,
+      'x-authentik-username': TEST_USERS.admin.username,
+      'x-authentik-email': TEST_USERS.admin.email,
+    });
+    // 직접 페이지 접근
     await page.goto('/requests');
   });
 

@@ -5,6 +5,7 @@ import {
   updateAllPendingRequestsStatus,
   restoreRequestsToPending,
 } from './helpers/db';
+import { TEST_USERS } from './helpers/auth';
 
 /**
  * 대기 목록 화면 E2E 테스트
@@ -21,6 +22,14 @@ import {
  * - /login 접근 시 404 또는 /requests 리다이렉트 확인
  * - 승인/거절 API 호출이 Bearer 헤더 없이 성공하는지 확인
  */
+
+test.beforeEach(async ({ page }) => {
+  await page.setExtraHTTPHeaders({
+    'x-authentik-uid': TEST_USERS.admin.authentikUid,
+    'x-authentik-username': TEST_USERS.admin.username,
+    'x-authentik-email': TEST_USERS.admin.email,
+  });
+});
 
 test.describe('대기 목록 화면 (/requests)', () => {
   test('대기 목록 페이지에 접근하면 PENDING 요청이 카드로 렌더링된다 (happy path)', async ({

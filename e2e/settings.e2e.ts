@@ -169,8 +169,7 @@ async function mockBrowserPushAPIsInline(
   );
 }
 
-// DLD-833: 프론트엔드 인증 흐름 제거 전 skip — DLD-834에서 활성화 예정
-test.describe.skip('설정 페이지 Push 알림 토글 (/settings)', () => {
+test.describe('설정 페이지 Push 알림 토글 (/settings)', () => {
   test.beforeEach(async ({ page }) => {
     // 직접 페이지 접근 (E2E_FORWARD_AUTH_USER 환경변수로 전역 인증 주입)
     await page.goto('/requests');

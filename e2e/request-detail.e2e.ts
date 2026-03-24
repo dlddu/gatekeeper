@@ -17,8 +17,7 @@ import { cleanupTestData, createTestRequest, findRequestByExternalId } from './h
  * DLD-657: 구현 완료 — test.describe.skip → test.describe 로 변경됨
  */
 
-// DLD-833: 프론트엔드 인증 흐름 제거 전 skip — DLD-834에서 활성화 예정
-test.describe.skip('요청 상세 화면 (/requests/:id)', () => {
+test.describe('요청 상세 화면 (/requests/:id)', () => {
   const createdExternalIds: string[] = [];
 
   test.beforeEach(async ({ page }) => {

@@ -22,8 +22,7 @@ import {
  * - 승인/거절 API 호출이 Bearer 헤더 없이 성공하는지 확인
  */
 
-// DLD-833: 프론트엔드 인증 흐름 제거 전 skip — DLD-834에서 활성화 예정
-test.describe.skip('대기 목록 화면 (/requests)', () => {
+test.describe('대기 목록 화면 (/requests)', () => {
   test('대기 목록 페이지에 접근하면 PENDING 요청이 카드로 렌더링된다 (happy path)', async ({
     page,
   }) => {
@@ -117,8 +116,7 @@ test.describe.skip('대기 목록 화면 (/requests)', () => {
   });
 });
 
-// DLD-833: 프론트엔드 인증 흐름 제거 전 skip — DLD-834에서 활성화 예정
-test.describe.skip('/login 경로 접근 동작', () => {
+test.describe('/login 경로 접근 동작', () => {
   test('/login 접근 시 404 또는 /requests로 리다이렉트된다 (happy path)', async ({ page }) => {
     // Act: /login 경로로 직접 접근
     const response = await page.goto('/login');
@@ -131,8 +129,7 @@ test.describe.skip('/login 경로 접근 동작', () => {
   });
 });
 
-// DLD-833: 프론트엔드 인증 흐름 제거 전 skip — DLD-834에서 활성화 예정
-test.describe.skip('Bearer 헤더 없이 API 호출 검증', () => {
+test.describe('Bearer 헤더 없이 API 호출 검증', () => {
   const createdExternalIds: string[] = [];
 
   test.afterAll(async () => {

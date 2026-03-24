@@ -26,8 +26,7 @@ import {
  * TODO: DLD-658 구현 완료 후 test.describe.skip → test.describe 로 변경
  */
 
-// DLD-833: 프론트엔드 인증 흐름 제거 전 skip — DLD-834에서 활성화 예정
-test.describe.skip('처리 이력 화면 (/history)', () => {
+test.describe('처리 이력 화면 (/history)', () => {
   const createdExternalIds: string[] = [];
 
   test.beforeEach(async ({ page }) => {

@@ -1,6 +1,7 @@
 import { test, expect } from '@playwright/test';
 import {
   cleanupTestData,
+  createTestRequest,
   findRequestByExternalId,
   updateAllPendingRequestsStatus,
   restoreRequestsToPending,
@@ -148,9 +149,15 @@ test.describe('Bearer 헤더 없이 API 호출 검증', () => {
   test('승인 버튼 클릭 시 Bearer 헤더 없이 PATCH /api/requests/:id/approve 가 성공한다 (happy path)', async ({
     page,
   }) => {
-    // Arrange: 글로벌 시드 데이터의 PENDING 요청 사용
-    const pendingRequest = await findRequestByExternalId('e2e-pending-001');
-    expect(pendingRequest).not.toBeNull();
+    // Arrange: 이 테스트 전용 PENDING 요청 생성
+    const externalId = `e2e-bearer-approve-${Date.now()}`;
+    createdExternalIds.push(externalId);
+    const pendingRequest = await createTestRequest({
+      externalId,
+      context: 'Bearer 헤더 없이 승인 테스트용 요청입니다.',
+      requesterName: 'E2E Bearer Test Bot',
+      status: 'PENDING',
+    });
 
     // Arrange: 요청 헤더 캡처 준비
     const capturedHeaders: Record<string, string>[] = [];
@@ -160,7 +167,7 @@ test.describe('Bearer 헤더 없이 API 호출 검증', () => {
     });
 
     // Act: 직접 요청 상세 페이지 접근
-    await page.goto(`/requests/${pendingRequest!.id}`);
+    await page.goto(`/requests/${pendingRequest.id}`);
     await expect(page.getByRole('heading', { name: '요청 상세' })).toBeVisible();
 
     // Act: 승인 버튼 클릭
@@ -180,9 +187,15 @@ test.describe('Bearer 헤더 없이 API 호출 검증', () => {
   test('거절 버튼 클릭 시 Bearer 헤더 없이 PATCH /api/requests/:id/reject 가 성공한다 (happy path)', async ({
     page,
   }) => {
-    // Arrange: 글로벌 시드 데이터의 PENDING 요청 사용 (별도 요청 필요 시 생성)
-    const pendingRequest = await findRequestByExternalId('e2e-timeout-001');
-    expect(pendingRequest).not.toBeNull();
+    // Arrange: 이 테스트 전용 PENDING 요청 생성
+    const externalId = `e2e-bearer-reject-${Date.now()}`;
+    createdExternalIds.push(externalId);
+    const pendingRequest = await createTestRequest({
+      externalId,
+      context: 'Bearer 헤더 없이 거절 테스트용 요청입니다.',
+      requesterName: 'E2E Bearer Test Bot',
+      status: 'PENDING',
+    });
 
     // Arrange: 요청 헤더 캡처 준비
     const capturedHeaders: Record<string, string>[] = [];
@@ -192,7 +205,7 @@ test.describe('Bearer 헤더 없이 API 호출 검증', () => {
     });
 
     // Act: 직접 요청 상세 페이지 접근
-    await page.goto(`/requests/${pendingRequest!.id}`);
+    await page.goto(`/requests/${pendingRequest.id}`);
     await expect(page.getByRole('heading', { name: '요청 상세' })).toBeVisible();
 
     // Act: 거절 버튼 클릭

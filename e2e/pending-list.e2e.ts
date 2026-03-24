@@ -1,10 +1,12 @@
 import { test, expect } from '@playwright/test';
 import {
   cleanupTestData,
+  createTestRequest,
   findRequestByExternalId,
   updateAllPendingRequestsStatus,
   restoreRequestsToPending,
 } from './helpers/db';
+import { TEST_USERS } from './helpers/auth';
 
 /**
  * 대기 목록 화면 E2E 테스트
@@ -22,8 +24,15 @@ import {
  * - 승인/거절 API 호출이 Bearer 헤더 없이 성공하는지 확인
  */
 
-// DLD-833: 프론트엔드 인증 흐름 제거 전 skip — DLD-834에서 활성화 예정
-test.describe.skip('대기 목록 화면 (/requests)', () => {
+test.beforeEach(async ({ page }) => {
+  await page.setExtraHTTPHeaders({
+    'x-authentik-uid': TEST_USERS.admin.authentikUid,
+    'x-authentik-username': TEST_USERS.admin.username,
+    'x-authentik-email': TEST_USERS.admin.email,
+  });
+});
+
+test.describe('대기 목록 화면 (/requests)', () => {
   test('대기 목록 페이지에 접근하면 PENDING 요청이 카드로 렌더링된다 (happy path)', async ({
     page,
   }) => {
@@ -117,8 +126,7 @@ test.describe.skip('대기 목록 화면 (/requests)', () => {
   });
 });
 
-// DLD-833: 프론트엔드 인증 흐름 제거 전 skip — DLD-834에서 활성화 예정
-test.describe.skip('/login 경로 접근 동작', () => {
+test.describe('/login 경로 접근 동작', () => {
   test('/login 접근 시 404 또는 /requests로 리다이렉트된다 (happy path)', async ({ page }) => {
     // Act: /login 경로로 직접 접근
     const response = await page.goto('/login');
@@ -131,8 +139,7 @@ test.describe.skip('/login 경로 접근 동작', () => {
   });
 });
 
-// DLD-833: 프론트엔드 인증 흐름 제거 전 skip — DLD-834에서 활성화 예정
-test.describe.skip('Bearer 헤더 없이 API 호출 검증', () => {
+test.describe('Bearer 헤더 없이 API 호출 검증', () => {
   const createdExternalIds: string[] = [];
 
   test.afterAll(async () => {
@@ -142,9 +149,15 @@ test.describe.skip('Bearer 헤더 없이 API 호출 검증', () => {
   test('승인 버튼 클릭 시 Bearer 헤더 없이 PATCH /api/requests/:id/approve 가 성공한다 (happy path)', async ({
     page,
   }) => {
-    // Arrange: 글로벌 시드 데이터의 PENDING 요청 사용
-    const pendingRequest = await findRequestByExternalId('e2e-pending-001');
-    expect(pendingRequest).not.toBeNull();
+    // Arrange: 이 테스트 전용 PENDING 요청 생성
+    const externalId = `e2e-bearer-approve-${Date.now()}`;
+    createdExternalIds.push(externalId);
+    const pendingRequest = await createTestRequest({
+      externalId,
+      context: 'Bearer 헤더 없이 승인 테스트용 요청입니다.',
+      requesterName: 'E2E Bearer Test Bot',
+      status: 'PENDING',
+    });
 
     // Arrange: 요청 헤더 캡처 준비
     const capturedHeaders: Record<string, string>[] = [];
@@ -154,7 +167,7 @@ test.describe.skip('Bearer 헤더 없이 API 호출 검증', () => {
     });
 
     // Act: 직접 요청 상세 페이지 접근
-    await page.goto(`/requests/${pendingRequest!.id}`);
+    await page.goto(`/requests/${pendingRequest.id}`);
     await expect(page.getByRole('heading', { name: '요청 상세' })).toBeVisible();
 
     // Act: 승인 버튼 클릭
@@ -174,9 +187,15 @@ test.describe.skip('Bearer 헤더 없이 API 호출 검증', () => {
   test('거절 버튼 클릭 시 Bearer 헤더 없이 PATCH /api/requests/:id/reject 가 성공한다 (happy path)', async ({
     page,
   }) => {
-    // Arrange: 글로벌 시드 데이터의 PENDING 요청 사용 (별도 요청 필요 시 생성)
-    const pendingRequest = await findRequestByExternalId('e2e-timeout-001');
-    expect(pendingRequest).not.toBeNull();
+    // Arrange: 이 테스트 전용 PENDING 요청 생성
+    const externalId = `e2e-bearer-reject-${Date.now()}`;
+    createdExternalIds.push(externalId);
+    const pendingRequest = await createTestRequest({
+      externalId,
+      context: 'Bearer 헤더 없이 거절 테스트용 요청입니다.',
+      requesterName: 'E2E Bearer Test Bot',
+      status: 'PENDING',
+    });
 
     // Arrange: 요청 헤더 캡처 준비
     const capturedHeaders: Record<string, string>[] = [];
@@ -186,7 +205,7 @@ test.describe.skip('Bearer 헤더 없이 API 호출 검증', () => {
     });
 
     // Act: 직접 요청 상세 페이지 접근
-    await page.goto(`/requests/${pendingRequest!.id}`);
+    await page.goto(`/requests/${pendingRequest.id}`);
     await expect(page.getByRole('heading', { name: '요청 상세' })).toBeVisible();
 
     // Act: 거절 버튼 클릭

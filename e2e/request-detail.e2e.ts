@@ -1,5 +1,6 @@
 import { test, expect } from '@playwright/test';
 import { cleanupTestData, createTestRequest, findRequestByExternalId } from './helpers/db';
+import { TEST_USERS } from './helpers/auth';
 
 /**
  * 요청 상세 및 승인/거절 화면 E2E 테스트
@@ -17,12 +18,16 @@ import { cleanupTestData, createTestRequest, findRequestByExternalId } from './h
  * DLD-657: 구현 완료 — test.describe.skip → test.describe 로 변경됨
  */
 
-// DLD-833: 프론트엔드 인증 흐름 제거 전 skip — DLD-834에서 활성화 예정
-test.describe.skip('요청 상세 화면 (/requests/:id)', () => {
+test.describe('요청 상세 화면 (/requests/:id)', () => {
   const createdExternalIds: string[] = [];
 
   test.beforeEach(async ({ page }) => {
-    // 직접 페이지 접근 (E2E_FORWARD_AUTH_USER 환경변수로 전역 인증 주입)
+    await page.setExtraHTTPHeaders({
+      'x-authentik-uid': TEST_USERS.admin.authentikUid,
+      'x-authentik-username': TEST_USERS.admin.username,
+      'x-authentik-email': TEST_USERS.admin.email,
+    });
+    // 직접 페이지 접근
     await page.goto('/requests');
   });
 

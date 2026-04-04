@@ -59,13 +59,13 @@ async function seedDatabase(databaseUrl: string): Promise<void> {
   const prisma = new PrismaClient({ adapter });
 
   try {
-    // 테스트 관리자 사용자 생성 (Forward Auth: authentikUid 사용)
+    // 테스트 관리자 사용자 생성 (Forward Auth: autheliaId 사용)
     await prisma.user.upsert({
       where: { username: 'admin' },
       update: {},
       create: {
         username: 'admin',
-        authentikUid: 'e2e-admin-uid-001',
+        autheliaId: 'e2e-admin-uid-001',
         displayName: 'E2E Test Admin',
       },
     });
@@ -76,7 +76,7 @@ async function seedDatabase(databaseUrl: string): Promise<void> {
       update: {},
       create: {
         username: 'testuser',
-        authentikUid: 'e2e-user-uid-001',
+        autheliaId: 'e2e-user-uid-001',
         displayName: 'E2E Test User',
       },
     });
@@ -87,7 +87,7 @@ async function seedDatabase(databaseUrl: string): Promise<void> {
       update: {},
       create: {
         username: 'test',
-        authentikUid: 'e2e-test-uid-001',
+        autheliaId: 'e2e-test-uid-001',
         displayName: 'Middleware Test User',
       },
     });

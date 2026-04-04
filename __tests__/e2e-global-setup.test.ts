@@ -88,13 +88,13 @@ describe('e2e/global-setup.ts', () => {
       expect(adminUpsert).toBeDefined();
     });
 
-    it('시드 데이터에 authentikUid 필드가 사용되어야 한다', async () => {
+    it('시드 데이터에 autheliaId 필드가 사용되어야 한다', async () => {
       await globalSetup();
       const upsertCalls = mockUpsert.mock.calls;
-      const userWithAuthentikUid = upsertCalls.find(
-        (call) => call[0]?.create?.authentikUid !== undefined
+      const userWithAutheliaId = upsertCalls.find(
+        (call) => call[0]?.create?.autheliaId !== undefined
       );
-      expect(userWithAuthentikUid).toBeDefined();
+      expect(userWithAutheliaId).toBeDefined();
     });
   });
 });

@@ -13,6 +13,6 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
     username: user.username,
     email: user.email,
     displayName: user.displayName,
-    authentikUid: user.authentikUid,
+    autheliaId: user.autheliaId,
   });
 }

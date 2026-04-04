@@ -3,7 +3,7 @@
  *
  * DLD-827: Forward Auth 기반으로 변경
  * app/api/requests/[id]/approve/route.ts의 PATCH 핸들러 동작을 검증합니다.
- * x-authentik-uid 헤더로 사용자를 식별합니다.
+ * Remote-User 헤더로 사용자를 식별합니다.
  */
 
 // --- Mock 설정 (import보다 먼저 선언되어야 함) ---
@@ -38,10 +38,10 @@ const mockRequestUpdate = prisma.request.update as jest.Mock;
 
 // --- 테스트 헬퍼 ---
 
-function makeRequest(id: string, authentikUid?: string): NextRequest {
+function makeRequest(id: string, autheliaId?: string): NextRequest {
   const headers: Record<string, string> = {};
-  if (authentikUid !== undefined) {
-    headers['x-authentik-uid'] = authentikUid;
+  if (autheliaId !== undefined) {
+    headers['Remote-User'] = autheliaId;
   }
   return new NextRequest(`http://localhost/api/requests/${id}/approve`, {
     method: 'PATCH',
@@ -69,7 +69,7 @@ function makeMockRequest(overrides: Record<string, unknown> = {}): Record<string
   };
 }
 
-const mockUser = { id: 'user-admin', username: 'admin', authentikUid: 'uid-admin-001' };
+const mockUser = { id: 'user-admin', username: 'admin', autheliaId: 'uid-admin-001' };
 
 // --- 테스트 스위트 ---
 
@@ -83,8 +83,8 @@ describe('PATCH /api/requests/:id/approve', () => {
   // ----------------------------------------------------------------
   // Forward Auth 인증 없음 → 401
   // ----------------------------------------------------------------
-  describe('x-authentik-uid 헤더 없음 (401 Unauthorized)', () => {
-    it('x-authentik-uid 헤더가 없으면 401을 반환해야 한다', async () => {
+  describe('Remote-User 헤더 없음 (401 Unauthorized)', () => {
+    it('Remote-User 헤더가 없으면 401을 반환해야 한다', async () => {
       const request = makeRequest('clq1234567890');
       const params = makeParams('clq1234567890');
       const response = await PATCH(request, params);
@@ -108,7 +108,7 @@ describe('PATCH /api/requests/:id/approve', () => {
   });
 
   // ----------------------------------------------------------------
-  // authentikUid로 사용자를 찾지 못한 경우 → 401
+  // autheliaId로 사용자를 찾지 못한 경우 → 401
   // ----------------------------------------------------------------
   describe('사용자를 찾지 못한 경우 (401 Unauthorized)', () => {
     it('DB에 사용자가 없으면 401을 반환해야 한다', async () => {

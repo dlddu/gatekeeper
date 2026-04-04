@@ -3,10 +3,10 @@
  *
  * publicPaths 설정과 미들웨어 파일의 구조적 요구사항을 검증합니다.
  * Forward Auth 기반으로 변경된 미들웨어를 정적 분석합니다.
- * (JWT 검증 로직이 제거되고 Authentik Forward Auth 헤더 기반 인증으로 대체)
+ * (JWT 검증 로직이 제거되고 Authelia Forward Auth 헤더 기반 인증으로 대체)
  *
  * 런타임 동작 테스트:
- * - /api/* 경로에서 X-authentik-uid 헤더 없으면 401
+ * - /api/* 경로에서 Remote-User 헤더 없으면 401
  * - publicPaths는 헤더 없이도 통과
  * - 헤더가 있으면 정상 통과
  */
@@ -42,7 +42,7 @@ describe('middleware.ts', () => {
     });
 
     it('should NOT contain /api/auth/login in publicPaths (auth routes deleted)', () => {
-      // Forward Auth 환경에서는 Authentik이 인증을 담당하므로
+      // Forward Auth 환경에서는 Authelia가 인증을 담당하므로
       // /api/auth/login 라우트 자체가 삭제되어 publicPaths에서도 제거된다
       expect(middlewareContent).not.toContain('/api/auth/login');
     });
@@ -56,7 +56,7 @@ describe('middleware.ts', () => {
     });
 
     it('should NOT contain /login in publicPaths (login page deleted)', () => {
-      // Forward Auth 환경에서는 Authentik이 로그인 페이지를 제공하므로
+      // Forward Auth 환경에서는 Authelia가 로그인 페이지를 제공하므로
       // /login 경로가 삭제된다
       expect(middlewareContent).not.toContain('/login');
     });
@@ -99,7 +99,7 @@ describe('middleware.ts', () => {
 // 미들웨어 런타임 동작 테스트
 //
 // middleware 함수를 직접 import하여 요청/응답 흐름을 검증합니다.
-// X-authentik-uid 헤더 유무에 따른 인증 동작과
+// Remote-User 헤더 유무에 따른 인증 동작과
 // publicPaths의 통과 여부를 테스트합니다.
 // ----------------------------------------------------------------
 
@@ -143,10 +143,10 @@ describe('middleware 런타임 동작', () => {
   });
 
   // ----------------------------------------------------------------
-  // /api/* 경로에서 X-authentik-uid 헤더 없으면 401
+  // /api/* 경로에서 Remote-User 헤더 없으면 401
   // ----------------------------------------------------------------
-  describe('/api/* 경로 — X-authentik-uid 헤더 없으면 401', () => {
-    it('/api/me 경로에서 x-authentik-uid 헤더가 없으면 401을 반환해야 한다', async () => {
+  describe('/api/* 경로 — Remote-User 헤더 없으면 401', () => {
+    it('/api/me 경로에서 Remote-User 헤더가 없으면 401을 반환해야 한다', async () => {
       // Arrange
       const request = makeMiddlewareRequest('/api/me');
 
@@ -195,7 +195,7 @@ describe('middleware 런타임 동작', () => {
   // ----------------------------------------------------------------
   // publicPaths는 헤더 없이도 통과
   // ----------------------------------------------------------------
-  describe('publicPaths — X-authentik-uid 헤더 없이도 통과', () => {
+  describe('publicPaths — Remote-User 헤더 없이도 통과', () => {
     it('/api/health는 헤더 없이도 NextResponse.next()를 호출해야 한다', async () => {
       // Arrange
       const request = makeMiddlewareRequest('/api/health');
@@ -253,13 +253,13 @@ describe('middleware 런타임 동작', () => {
   });
 
   // ----------------------------------------------------------------
-  // X-authentik-uid 헤더가 있으면 정상 통과
+  // Remote-User 헤더가 있으면 정상 통과
   // ----------------------------------------------------------------
-  describe('X-authentik-uid 헤더가 있으면 정상 통과', () => {
-    it('/api/me에서 x-authentik-uid 헤더가 있으면 NextResponse.next()를 호출해야 한다', async () => {
+  describe('Remote-User 헤더가 있으면 정상 통과', () => {
+    it('/api/me에서 Remote-User 헤더가 있으면 NextResponse.next()를 호출해야 한다', async () => {
       // Arrange
       const request = makeMiddlewareRequest('/api/me', {
-        'x-authentik-uid': 'uid-test-001',
+        'Remote-User': 'uid-test-001',
       });
 
       // Act
@@ -272,7 +272,7 @@ describe('middleware 런타임 동작', () => {
     it('/api/me/requests/pending에서 헤더가 있으면 NextResponse.next()를 호출해야 한다', async () => {
       // Arrange
       const request = makeMiddlewareRequest('/api/me/requests/pending', {
-        'x-authentik-uid': 'uid-test-001',
+        'Remote-User': 'uid-test-001',
       });
 
       // Act
@@ -285,7 +285,7 @@ describe('middleware 런타임 동작', () => {
     it('헤더가 있으면 401을 반환하지 않아야 한다', async () => {
       // Arrange
       const request = makeMiddlewareRequest('/api/me', {
-        'x-authentik-uid': 'uid-test-001',
+        'Remote-User': 'uid-test-001',
       });
 
       // Act

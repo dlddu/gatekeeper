@@ -85,27 +85,27 @@ describe('prisma/schema.prisma', () => {
     // ----------------------------------------------------------------
 
     it('should have email field as nullable (String?)', () => {
-      // email은 authentik에서 전달받는 선택적 필드이다
+      // email은 authelia에서 전달받는 선택적 필드이다
       const userModelMatch = schemaContent.match(/model User \{([^}]+)\}/s);
       expect(userModelMatch).not.toBeNull();
       expect(userModelMatch![1]).toContain('email');
       expect(userModelMatch![1]).toMatch(/email\s+String\?/);
     });
 
-    it('should NOT have oidcSub field (replaced by authentikUid in Forward Auth migration)', () => {
-      // oidcSub는 제거되고 authentikUid로 대체된다
+    it('should NOT have oidcSub field (replaced by autheliaId in Forward Auth migration)', () => {
+      // oidcSub는 제거되고 autheliaId로 대체된다
       const userModelMatch = schemaContent.match(/model User \{([^}]+)\}/s);
       expect(userModelMatch).not.toBeNull();
       expect(userModelMatch![1]).not.toContain('oidcSub');
     });
 
-    it('should have authentikUid field as unique (String @unique)', () => {
-      // authentikUid는 Forward Auth 헤더(X-Authentik-UID)에서 전달받는 필드이며
+    it('should have autheliaId field as unique (String @unique)', () => {
+      // autheliaId는 Forward Auth 헤더(Remote-User)에서 전달받는 필드이며
       // 사용자 식별의 primary key이므로 unique이어야 한다
       const userModelMatch = schemaContent.match(/model User \{([^}]+)\}/s);
       expect(userModelMatch).not.toBeNull();
-      expect(userModelMatch![1]).toContain('authentikUid');
-      expect(userModelMatch![1]).toMatch(/authentikUid.*@unique|@unique.*authentikUid/);
+      expect(userModelMatch![1]).toContain('autheliaId');
+      expect(userModelMatch![1]).toMatch(/autheliaId.*@unique|@unique.*autheliaId/);
     });
   });
 

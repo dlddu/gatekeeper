@@ -52,13 +52,13 @@ test.describe('Push 구독 등록 API → DB 저장 확인', () => {
   test('유효한 구독 정보로 등록하면 DB에 PushSubscription 레코드가 생성된다 (happy path)', async ({
     request,
   }) => {
-    const { authentikUid } = await loginAsAdmin(request);
+    const { autheliaId } = await loginAsAdmin(request);
     const endpoint = `${MOCK_PUSH_SUBSCRIPTION.endpoint}-db-check-${Date.now()}`;
     createdEndpoints.push(endpoint);
 
     // Act: 구독 등록 API 호출
     const response = await request.post('/api/me/push/subscribe', {
-      ...withAuthHeader(authentikUid),
+      ...withAuthHeader(autheliaId),
       data: {
         endpoint,
         p256dh: MOCK_PUSH_SUBSCRIPTION.keys.p256dh,
@@ -90,12 +90,12 @@ test.describe('Push 구독 등록 API → DB 저장 확인', () => {
   test('구독 등록 후 DB에 저장된 userId가 인증된 사용자의 ID와 일치한다 (happy path)', async ({
     request,
   }) => {
-    const { authentikUid } = await loginAsAdmin(request);
+    const { autheliaId } = await loginAsAdmin(request);
     const endpoint = `${MOCK_PUSH_SUBSCRIPTION.endpoint}-userid-check-${Date.now()}`;
     createdEndpoints.push(endpoint);
 
     await request.post('/api/me/push/subscribe', {
-      ...withAuthHeader(authentikUid),
+      ...withAuthHeader(autheliaId),
       data: {
         endpoint,
         p256dh: MOCK_PUSH_SUBSCRIPTION.keys.p256dh,
@@ -103,7 +103,7 @@ test.describe('Push 구독 등록 API → DB 저장 확인', () => {
       },
     });
 
-    // Assert: DB의 userId가 로그인한 사용자의 authentikUid와 일치하는지 확인
+    // Assert: DB의 userId가 로그인한 사용자의 autheliaId와 일치하는지 확인
     const prisma = await createTestPrismaClient();
     try {
       const subscription = await prisma.pushSubscription.findUnique({
@@ -120,13 +120,13 @@ test.describe('Push 구독 등록 API → DB 저장 확인', () => {
   test('동일한 endpoint로 중복 구독 시 DB에 레코드가 하나만 존재한다 (edge case)', async ({
     request,
   }) => {
-    const { authentikUid } = await loginAsAdmin(request);
+    const { autheliaId } = await loginAsAdmin(request);
     const endpoint = `${MOCK_PUSH_SUBSCRIPTION.endpoint}-dedup-check-${Date.now()}`;
     createdEndpoints.push(endpoint);
 
     // 첫 번째 구독 등록
     await request.post('/api/me/push/subscribe', {
-      ...withAuthHeader(authentikUid),
+      ...withAuthHeader(autheliaId),
       data: {
         endpoint,
         p256dh: MOCK_PUSH_SUBSCRIPTION.keys.p256dh,
@@ -136,7 +136,7 @@ test.describe('Push 구독 등록 API → DB 저장 확인', () => {
 
     // 두 번째 구독 등록 (동일 endpoint)
     await request.post('/api/me/push/subscribe', {
-      ...withAuthHeader(authentikUid),
+      ...withAuthHeader(autheliaId),
       data: {
         endpoint,
         p256dh: MOCK_PUSH_SUBSCRIPTION.keys.p256dh,
@@ -190,12 +190,12 @@ test.describe('확인 요청 생성 시 → web-push 발송 함수 호출 확인
     request,
   }) => {
     // Arrange: Push 구독 등록
-    const { authentikUid } = await loginAsAdmin(request);
+    const { autheliaId } = await loginAsAdmin(request);
     const endpoint = `${MOCK_PUSH_SUBSCRIPTION.endpoint}-push-send-check-${Date.now()}`;
     createdEndpoints.push(endpoint);
 
     await request.post('/api/me/push/subscribe', {
-      ...withAuthHeader(authentikUid),
+      ...withAuthHeader(autheliaId),
       data: {
         endpoint,
         p256dh: MOCK_PUSH_SUBSCRIPTION.keys.p256dh,
@@ -254,12 +254,12 @@ test.describe('확인 요청 생성 시 → web-push 발송 함수 호출 확인
     request,
   }) => {
     // Arrange: Push 구독 등록 (실제 발송 시 잘못된 VAPID 키로 인해 실패할 것)
-    const { authentikUid } = await loginAsAdmin(request);
+    const { autheliaId } = await loginAsAdmin(request);
     const endpoint = `${MOCK_PUSH_SUBSCRIPTION.endpoint}-push-fail-${Date.now()}`;
     createdEndpoints.push(endpoint);
 
     await request.post('/api/me/push/subscribe', {
-      ...withAuthHeader(authentikUid),
+      ...withAuthHeader(autheliaId),
       data: {
         endpoint,
         p256dh: MOCK_PUSH_SUBSCRIPTION.keys.p256dh,
@@ -315,13 +315,13 @@ test.describe('Push 구독 해제 → DB 삭제 확인', () => {
   test('구독 해제 후 DB에서 PushSubscription 레코드가 삭제된다 (happy path)', async ({
     request,
   }) => {
-    const { authentikUid } = await loginAsAdmin(request);
+    const { autheliaId } = await loginAsAdmin(request);
     const endpoint = `${MOCK_PUSH_SUBSCRIPTION.endpoint}-unsub-db-check-${Date.now()}`;
     createdEndpoints.push(endpoint);
 
     // Arrange: 구독 등록
     await request.post('/api/me/push/subscribe', {
-      ...withAuthHeader(authentikUid),
+      ...withAuthHeader(autheliaId),
       data: {
         endpoint,
         p256dh: MOCK_PUSH_SUBSCRIPTION.keys.p256dh,
@@ -339,7 +339,7 @@ test.describe('Push 구독 해제 → DB 삭제 확인', () => {
 
       // Act: 구독 해제 API 호출
       const unsubResponse = await request.delete('/api/me/push/unsubscribe', {
-        ...withAuthHeader(authentikUid),
+        ...withAuthHeader(autheliaId),
         data: { endpoint },
       });
 
@@ -359,13 +359,13 @@ test.describe('Push 구독 해제 → DB 삭제 확인', () => {
   test('구독 해제 후 동일 endpoint로 재구독하면 새 레코드가 생성된다 (edge case)', async ({
     request,
   }) => {
-    const { authentikUid } = await loginAsAdmin(request);
+    const { autheliaId } = await loginAsAdmin(request);
     const endpoint = `${MOCK_PUSH_SUBSCRIPTION.endpoint}-resub-check-${Date.now()}`;
     createdEndpoints.push(endpoint);
 
     // Arrange: 구독 등록 → 해제 → 재구독
     await request.post('/api/me/push/subscribe', {
-      ...withAuthHeader(authentikUid),
+      ...withAuthHeader(autheliaId),
       data: {
         endpoint,
         p256dh: MOCK_PUSH_SUBSCRIPTION.keys.p256dh,
@@ -374,13 +374,13 @@ test.describe('Push 구독 해제 → DB 삭제 확인', () => {
     });
 
     await request.delete('/api/me/push/unsubscribe', {
-      ...withAuthHeader(authentikUid),
+      ...withAuthHeader(autheliaId),
       data: { endpoint },
     });
 
     // Act: 재구독
     const resubResponse = await request.post('/api/me/push/subscribe', {
-      ...withAuthHeader(authentikUid),
+      ...withAuthHeader(autheliaId),
       data: {
         endpoint,
         p256dh: MOCK_PUSH_SUBSCRIPTION.keys.p256dh,
@@ -407,14 +407,14 @@ test.describe('Push 구독 해제 → DB 삭제 확인', () => {
   test('존재하지 않는 endpoint 해제 시 DB 레코드에 변화가 없다 (error case)', async ({
     request,
   }) => {
-    const { authentikUid } = await loginAsAdmin(request);
+    const { autheliaId } = await loginAsAdmin(request);
     const endpoint = `${MOCK_PUSH_SUBSCRIPTION.endpoint}-valid-keep-${Date.now()}`;
     const nonExistentEndpoint = 'https://nonexistent.endpoint.example.com/push/e2e-test';
     createdEndpoints.push(endpoint);
 
     // Arrange: 유효한 구독 등록
     await request.post('/api/me/push/subscribe', {
-      ...withAuthHeader(authentikUid),
+      ...withAuthHeader(autheliaId),
       data: {
         endpoint,
         p256dh: MOCK_PUSH_SUBSCRIPTION.keys.p256dh,
@@ -424,7 +424,7 @@ test.describe('Push 구독 해제 → DB 삭제 확인', () => {
 
     // Act: 존재하지 않는 endpoint로 해제 시도
     const unsubResponse = await request.delete('/api/me/push/unsubscribe', {
-      ...withAuthHeader(authentikUid),
+      ...withAuthHeader(autheliaId),
       data: { endpoint: nonExistentEndpoint },
     });
 
@@ -448,12 +448,12 @@ test.describe('POST /api/me/push/subscribe — Forward Auth 전환 (DLD-827)', (
   /**
    * DLD-827: Forward Auth 기반 인증으로 전환
    *
-   * 기존 loginAsAdmin(request) + withAuthHeader(auth.authentikUid) 2단계 호출을
+   * 기존 loginAsAdmin(request) + withAuthHeader(auth.autheliaId) 2단계 호출을
    * forwardAuthHeaders(TEST_USERS.admin) 1단계 호출로 대체합니다.
    *
    * 검증 항목:
    * - Forward Auth 헤더의 userId로 PushSubscription DB 레코드가 생성됨
-   * - 생성된 레코드의 userId가 헤더의 authentikUid에 해당하는 내부 사용자 ID와 일치함
+   * - 생성된 레코드의 userId가 헤더의 autheliaId에 해당하는 내부 사용자 ID와 일치함
    */
 
   const createdEndpoints: string[] = [];
@@ -535,9 +535,9 @@ test.describe('POST /api/me/push/subscribe — Forward Auth 전환 (DLD-827)', (
       expect(subscription?.userId).toBeTruthy();
       expect(typeof subscription?.userId).toBe('string');
 
-      // Forward Auth 헤더의 authentikUid로 조회한 사용자의 내부 ID와 일치해야 함
+      // Forward Auth 헤더의 autheliaId로 조회한 사용자의 내부 ID와 일치해야 함
       const user = await prisma.user.findUnique({
-        where: { authentikUid: TEST_USERS.admin.authentikUid },
+        where: { autheliaId: TEST_USERS.admin.autheliaId },
         select: { id: true },
       });
       expect(user).not.toBeNull();
@@ -607,7 +607,7 @@ test.describe('DELETE /api/me/push/unsubscribe — Forward Auth 전환 (DLD-827)
   /**
    * DLD-827: Forward Auth 기반 인증으로 전환
    *
-   * 기존 loginAsAdmin(request) + withAuthHeader(auth.authentikUid) 2단계 호출을
+   * 기존 loginAsAdmin(request) + withAuthHeader(auth.autheliaId) 2단계 호출을
    * forwardAuthHeaders(TEST_USERS.admin) 1단계 호출로 대체합니다.
    *
    * 검증 항목:

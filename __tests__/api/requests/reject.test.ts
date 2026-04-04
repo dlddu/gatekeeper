@@ -3,7 +3,7 @@
  *
  * DLD-827: Forward Auth 기반으로 변경
  * app/api/requests/[id]/reject/route.ts의 PATCH 핸들러 동작을 검증합니다.
- * x-authentik-uid 헤더로 사용자를 식별합니다.
+ * Remote-User 헤더로 사용자를 식별합니다.
  */
 
 // --- Mock 설정 (import보다 먼저 선언되어야 함) ---
@@ -34,10 +34,10 @@ const mockUserCreate = prisma.user.create as jest.Mock;
 const mockRequestFindUnique = prisma.request.findUnique as jest.Mock;
 const mockRequestUpdate = prisma.request.update as jest.Mock;
 
-function makeRequest(id: string, authentikUid?: string): NextRequest {
+function makeRequest(id: string, autheliaId?: string): NextRequest {
   const headers: Record<string, string> = {};
-  if (authentikUid !== undefined) {
-    headers['x-authentik-uid'] = authentikUid;
+  if (autheliaId !== undefined) {
+    headers['Remote-User'] = autheliaId;
   }
   return new NextRequest(`http://localhost/api/requests/${id}/reject`, {
     method: 'PATCH',
@@ -65,7 +65,7 @@ function makeMockRequest(overrides: Record<string, unknown> = {}): Record<string
   };
 }
 
-const mockUser = { id: 'user-admin', username: 'admin', authentikUid: 'uid-admin-001' };
+const mockUser = { id: 'user-admin', username: 'admin', autheliaId: 'uid-admin-001' };
 
 describe('PATCH /api/requests/:id/reject', () => {
   beforeEach(() => {
@@ -74,8 +74,8 @@ describe('PATCH /api/requests/:id/reject', () => {
     mockUserCreate.mockImplementation(() => Promise.resolve(mockUserFindUnique.mock.results.slice(-1)[0]?.value ?? null));
   });
 
-  describe('x-authentik-uid 헤더 없음 (401 Unauthorized)', () => {
-    it('x-authentik-uid 헤더가 없으면 401을 반환해야 한다', async () => {
+  describe('Remote-User 헤더 없음 (401 Unauthorized)', () => {
+    it('Remote-User 헤더가 없으면 401을 반환해야 한다', async () => {
       const request = makeRequest('clq1234567890');
       const params = makeParams('clq1234567890');
       const response = await PATCH(request, params);

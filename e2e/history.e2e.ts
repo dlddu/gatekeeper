@@ -32,9 +32,9 @@ test.describe('처리 이력 화면 (/history)', () => {
 
   test.beforeEach(async ({ page }) => {
     await page.setExtraHTTPHeaders({
-      'x-authentik-uid': TEST_USERS.admin.authentikUid,
-      'x-authentik-username': TEST_USERS.admin.username,
-      'x-authentik-email': TEST_USERS.admin.email,
+      'Remote-User': TEST_USERS.admin.autheliaId,
+      'Remote-Email': TEST_USERS.admin.email,
+      'Remote-Name': TEST_USERS.admin.displayName,
     });
     // 직접 페이지 접근
     await page.goto('/requests');

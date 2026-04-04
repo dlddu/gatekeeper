@@ -12,17 +12,17 @@ import { findUserByUsername, deleteTestUser } from './helpers/db';
  * - GET /api/me (Forward Auth 헤더 기반 사용자 식별)
  * - auto-provisioning: 최초 요청 시 사용자 자동 생성
  * - 기존 사용자 재요청 시 동일 사용자 반환
- * - X-authentik-email 변경 시 email 필드 업데이트
+ * - Remote-Email 변경 시 email 필드 업데이트
  */
 
 test.describe('GET /api/me (Forward Auth 사용자 식별)', () => {
   test('Forward Auth 헤더 포함 요청 시 200과 사용자 정보를 반환한다 (happy path)', async ({
     request,
   }) => {
-    // Global setup에서 미리 생성된 admin 사용자 활용
+    // Global setup에서 미리 생성된 admin 사용�� 활용
     const response = await request.get('/api/me', {
       ...withAuthHeader(
-        TEST_USERS.admin.authentikUid,
+        TEST_USERS.admin.autheliaId,
         TEST_USERS.admin.username,
         TEST_USERS.admin.email
       ),
@@ -33,7 +33,7 @@ test.describe('GET /api/me (Forward Auth 사용자 식별)', () => {
     const body = await response.json();
     expect(body).toHaveProperty('id');
     expect(body.username).toBe(TEST_USERS.admin.username);
-    expect(body.authentikUid).toBe(TEST_USERS.admin.authentikUid);
+    expect(body.autheliaId).toBe(TEST_USERS.admin.autheliaId);
   });
 
   test('Forward Auth 헤더 없이 요청 시 401을 반환한다 (error case)', async ({ request }) => {
@@ -46,7 +46,7 @@ test.describe('GET /api/me (Forward Auth 사용자 식별)', () => {
     request,
   }) => {
     const newUser = {
-      authentikUid: 'e2e-autoprov-uid-001',
+      autheliaId: 'e2e-autoprov-uid-001',
       username: 'e2e-autoprov-user',
       email: 'autoprov@example.com',
       displayName: 'E2E Auto Provisioned User',
@@ -59,33 +59,32 @@ test.describe('GET /api/me (Forward Auth 사용자 식별)', () => {
       // GET /api/me 요청 — 이 사용자는 DB에 존재하지 않으므로 auto-provisioning 발생해야 함
       const response = await request.get('/api/me', {
         headers: {
-          'x-authentik-uid': newUser.authentikUid,
-          'x-authentik-username': newUser.username,
-          'x-authentik-email': newUser.email,
-          'x-authentik-name': newUser.displayName,
+          'Remote-User': newUser.autheliaId,
+          'Remote-Email': newUser.email,
+          'Remote-Name': newUser.displayName,
         },
       });
 
       expect(response.status()).toBe(200);
 
       // DB에서 사용자가 실제로 생성되었는지 직접 조회로 검증
-      const createdUser = await findUserByUsername(newUser.username);
+      const createdUser = await findUserByUsername(newUser.autheliaId);
       expect(createdUser).not.toBeNull();
       expect(createdUser!.id).toBeTruthy();
     } finally {
       // cleanup: 테스트에서 생성한 사용자 삭제
-      await deleteTestUser(newUser.username);
+      await deleteTestUser(newUser.autheliaId);
     }
   });
 
-  test('동일 authentikUid로 재요청 시 새 사용자를 생성하지 않고 기존 사용자를 반환한다 (edge case)', async ({
+  test('동일 autheliaId로 재요청 시 새 사용자를 ��성하지 않고 기존 사용자를 반��한다 (edge case)', async ({
     request,
   }) => {
     // Global setup에서 미리 생성된 testuser 활용 (e2e-user-uid-001)
     // 첫 번째 요청
     const firstResponse = await request.get('/api/me', {
       ...withAuthHeader(
-        TEST_USERS.user.authentikUid,
+        TEST_USERS.user.autheliaId,
         TEST_USERS.user.username,
         TEST_USERS.user.email
       ),
@@ -94,10 +93,10 @@ test.describe('GET /api/me (Forward Auth 사용자 식별)', () => {
     expect(firstResponse.status()).toBe(200);
     const firstBody = await firstResponse.json();
 
-    // 두 번째 요청 (동일 authentikUid)
+    // 두 번째 요청 (동일 autheliaId)
     const secondResponse = await request.get('/api/me', {
       ...withAuthHeader(
-        TEST_USERS.user.authentikUid,
+        TEST_USERS.user.autheliaId,
         TEST_USERS.user.username,
         TEST_USERS.user.email
       ),
@@ -108,10 +107,10 @@ test.describe('GET /api/me (Forward Auth 사용자 식별)', () => {
 
     // 동일한 사용자 ID가 반환되어야 함 (새 레코드 생성 없음)
     expect(secondBody.id).toBe(firstBody.id);
-    expect(secondBody.authentikUid).toBe(TEST_USERS.user.authentikUid);
+    expect(secondBody.autheliaId).toBe(TEST_USERS.user.autheliaId);
   });
 
-  test('X-authentik-email 변경 시 사용자 email 필드가 업데이트된다 (edge case)', async ({
+  test('Remote-Email 변경 시 사용자 email 필드가 업데이트된다 (edge case)', async ({
     request,
   }) => {
     // Global setup에서 미리 생성된 admin 사용자 활용
@@ -120,10 +119,9 @@ test.describe('GET /api/me (Forward Auth 사용자 식별)', () => {
     // 변경된 email 헤더로 요청
     const response = await request.get('/api/me', {
       headers: {
-        'x-authentik-uid': TEST_USERS.admin.authentikUid,
-        'x-authentik-username': TEST_USERS.admin.username,
-        'x-authentik-email': updatedEmail,
-        'x-authentik-name': TEST_USERS.admin.displayName,
+        'Remote-User': TEST_USERS.admin.autheliaId,
+        'Remote-Email': updatedEmail,
+        'Remote-Name': TEST_USERS.admin.displayName,
       },
     });
 
@@ -136,10 +134,9 @@ test.describe('GET /api/me (Forward Auth 사용자 식별)', () => {
     // 원래 email로 복원 (다른 테스트에 영향 없도록)
     await request.get('/api/me', {
       headers: {
-        'x-authentik-uid': TEST_USERS.admin.authentikUid,
-        'x-authentik-username': TEST_USERS.admin.username,
-        'x-authentik-email': TEST_USERS.admin.email,
-        'x-authentik-name': TEST_USERS.admin.displayName,
+        'Remote-User': TEST_USERS.admin.autheliaId,
+        'Remote-Email': TEST_USERS.admin.email,
+        'Remote-Name': TEST_USERS.admin.displayName,
       },
     });
   });

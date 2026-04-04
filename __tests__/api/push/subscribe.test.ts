@@ -2,7 +2,7 @@
  * POST /api/me/push/subscribe 라우트 핸들러 테스트
  *
  * DLD-827: Forward Auth 기반으로 변경
- * x-authentik-uid 헤더로 사용자를 식별합니다.
+ * Remote-User 헤더로 사용자를 식별합니다.
  */
 
 // --- Mock 설정 ---
@@ -33,12 +33,12 @@ const mockUserCreate = prisma.user.create as jest.Mock;
 const mockPushSubscriptionCreate = prisma.pushSubscription.create as jest.Mock;
 const mockPushSubscriptionFindUnique = prisma.pushSubscription.findUnique as jest.Mock;
 
-function makeRequest(body: Record<string, unknown>, authentikUid?: string): NextRequest {
+function makeRequest(body: Record<string, unknown>, autheliaId?: string): NextRequest {
   const headers: Record<string, string> = {
     'Content-Type': 'application/json',
   };
-  if (authentikUid !== undefined) {
-    headers['x-authentik-uid'] = authentikUid;
+  if (autheliaId !== undefined) {
+    headers['Remote-User'] = autheliaId;
   }
   return new NextRequest('http://localhost/api/me/push/subscribe', {
     method: 'POST',
@@ -67,7 +67,7 @@ const validBody = {
   },
 };
 
-const mockUser = { id: 'user-admin', username: 'admin', authentikUid: 'uid-admin-001' };
+const mockUser = { id: 'user-admin', username: 'admin', autheliaId: 'uid-admin-001' };
 
 describe('POST /api/me/push/subscribe', () => {
   beforeEach(() => {
@@ -79,8 +79,8 @@ describe('POST /api/me/push/subscribe', () => {
   // ----------------------------------------------------------------
   // Forward Auth 인증 없음 → 401
   // ----------------------------------------------------------------
-  describe('x-authentik-uid 헤더 없음 (401 Unauthorized)', () => {
-    it('x-authentik-uid 헤더가 없으면 401을 반환해야 한다', async () => {
+  describe('Remote-User 헤더 없음 (401 Unauthorized)', () => {
+    it('Remote-User 헤더가 없으면 401을 반환해야 한다', async () => {
       const request = makeRequest(validBody);
       const response = await POST(request);
       expect(response.status).toBe(401);

@@ -262,7 +262,7 @@ test.describe('PATCH /api/requests/:id/approve (승인)', () => {
     // Act: 승인 요청
     const approveResponse = await request.patch(
       `/api/requests/${created.id}/approve`,
-      withAuthHeader(auth.authentikUid)
+      withAuthHeader(auth.autheliaId)
     );
 
     // Assert
@@ -290,12 +290,12 @@ test.describe('PATCH /api/requests/:id/approve (승인)', () => {
     const created = await createResponse.json();
     const auth = await loginAsAdmin(request);
 
-    await request.patch(`/api/requests/${created.id}/approve`, withAuthHeader(auth.authentikUid));
+    await request.patch(`/api/requests/${created.id}/approve`, withAuthHeader(auth.autheliaId));
 
     // Act: 다시 승인 시도
     const response = await request.patch(
       `/api/requests/${created.id}/approve`,
-      withAuthHeader(auth.authentikUid)
+      withAuthHeader(auth.autheliaId)
     );
 
     // Assert
@@ -318,11 +318,11 @@ test.describe('PATCH /api/requests/:id/approve (승인)', () => {
   });
 
   test('존재하지 않는 요청 ID로 승인하면 404를 반환한다 (error case)', async ({ request }) => {
-    const { authentikUid } = await loginAsAdmin(request);
+    const { autheliaId } = await loginAsAdmin(request);
 
     const response = await request.patch(
       '/api/requests/nonexistent-id-000/approve',
-      withAuthHeader(authentikUid)
+      withAuthHeader(autheliaId)
     );
 
     expect(response.status()).toBe(404);
@@ -361,7 +361,7 @@ test.describe('PATCH /api/requests/:id/reject (거절)', () => {
     // Act: 거절 요청
     const rejectResponse = await request.patch(
       `/api/requests/${created.id}/reject`,
-      withAuthHeader(auth.authentikUid)
+      withAuthHeader(auth.autheliaId)
     );
 
     // Assert
@@ -389,12 +389,12 @@ test.describe('PATCH /api/requests/:id/reject (거절)', () => {
     const created = await createResponse.json();
     const auth = await loginAsAdmin(request);
 
-    await request.patch(`/api/requests/${created.id}/reject`, withAuthHeader(auth.authentikUid));
+    await request.patch(`/api/requests/${created.id}/reject`, withAuthHeader(auth.autheliaId));
 
     // Act: 다시 거절 시도
     const response = await request.patch(
       `/api/requests/${created.id}/reject`,
-      withAuthHeader(auth.authentikUid)
+      withAuthHeader(auth.autheliaId)
     );
 
     // Assert
@@ -653,7 +653,7 @@ test.describe('PATCH /api/requests/:id/approve — Forward Auth 전환 (DLD-827)
   /**
    * DLD-827: Forward Auth 기반 인증으로 전환
    *
-   * 기존 loginAsAdmin(request) + withAuthHeader(auth.authentikUid) 2단계 호출을
+   * 기존 loginAsAdmin(request) + withAuthHeader(auth.autheliaId) 2단계 호출을
    * forwardAuthHeaders(TEST_USERS.admin) 1단계 호출로 대체합니다.
    *
    * 검증 항목:
@@ -729,11 +729,11 @@ test.describe('PATCH /api/requests/:id/approve — Forward Auth 전환 (DLD-827)
     expect(body.processedById).toBeTruthy();
     expect(typeof body.processedById).toBe('string');
 
-    // Assert: Forward Auth 헤더의 authentikUid로 조회한 사용자의 내부 ID와 일치해야 함
+    // Assert: Forward Auth 헤더의 autheliaId로 조회한 사용자의 내부 ID와 일치해야 함
     const prisma = await createTestPrismaClient();
     try {
       const user = await prisma.user.findUnique({
-        where: { authentikUid: TEST_USERS.admin.authentikUid },
+        where: { autheliaId: TEST_USERS.admin.autheliaId },
         select: { id: true },
       });
       expect(user).not.toBeNull();
@@ -762,7 +762,7 @@ test.describe('PATCH /api/requests/:id/approve — Forward Auth 전환 (DLD-827)
     const created = await createResponse.json();
 
     // Act: Authorization 헤더 없이 Forward Auth 헤더만으로 승인
-    // forwardAuthHeaders는 x-authentik-* 헤더만 포함하며 Authorization 헤더를 포함하지 않음
+    // forwardAuthHeaders는 Remote-* 헤더만 포함하며 Authorization 헤더를 포함하지 않음
     const approveResponse = await request.patch(
       `/api/requests/${created.id}/approve`,
       forwardAuthHeaders(TEST_USERS.admin)
@@ -796,7 +796,7 @@ test.describe('PATCH /api/requests/:id/reject — Forward Auth 전환 (DLD-827)'
   /**
    * DLD-827: Forward Auth 기반 인증으로 전환
    *
-   * 기존 loginAsAdmin(request) + withAuthHeader(auth.authentikUid) 2단계 호출을
+   * 기존 loginAsAdmin(request) + withAuthHeader(auth.autheliaId) 2단계 호출을
    * forwardAuthHeaders(TEST_USERS.admin) 1단계 호출로 대체합니다.
    *
    * 검증 항목:
@@ -872,11 +872,11 @@ test.describe('PATCH /api/requests/:id/reject — Forward Auth 전환 (DLD-827)'
     expect(body.processedById).toBeTruthy();
     expect(typeof body.processedById).toBe('string');
 
-    // Assert: Forward Auth 헤더의 authentikUid로 조회한 사용자의 내부 ID와 일치해야 함
+    // Assert: Forward Auth 헤더의 autheliaId로 조회한 사용자의 내부 ID와 일치해야 함
     const prisma = await createTestPrismaClient();
     try {
       const user = await prisma.user.findUnique({
-        where: { authentikUid: TEST_USERS.admin.authentikUid },
+        where: { autheliaId: TEST_USERS.admin.autheliaId },
         select: { id: true },
       });
       expect(user).not.toBeNull();

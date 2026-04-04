@@ -2,7 +2,7 @@
  * DELETE /api/me/push/unsubscribe 라우트 핸들러 테스트
  *
  * DLD-827: Forward Auth 기반으로 변경
- * x-authentik-uid 헤더로 사용자를 식별합니다.
+ * Remote-User 헤더로 사용자를 식별합니다.
  */
 
 // --- Mock 설정 ---
@@ -33,12 +33,12 @@ const mockUserCreate = prisma.user.create as jest.Mock;
 const mockPushSubscriptionFindUnique = prisma.pushSubscription.findUnique as jest.Mock;
 const mockPushSubscriptionDelete = prisma.pushSubscription.delete as jest.Mock;
 
-function makeRequest(body: Record<string, unknown>, authentikUid?: string): NextRequest {
+function makeRequest(body: Record<string, unknown>, autheliaId?: string): NextRequest {
   const headers: Record<string, string> = {
     'Content-Type': 'application/json',
   };
-  if (authentikUid !== undefined) {
-    headers['x-authentik-uid'] = authentikUid;
+  if (autheliaId !== undefined) {
+    headers['Remote-User'] = autheliaId;
   }
   return new NextRequest('http://localhost/api/me/push/unsubscribe', {
     method: 'DELETE',
@@ -60,7 +60,7 @@ function makeMockSubscription(overrides: Record<string, unknown> = {}): Record<s
 }
 
 const validEndpoint = 'https://fcm.googleapis.com/fcm/send/example-endpoint';
-const mockUser = { id: 'user-admin', username: 'admin', authentikUid: 'uid-admin-001' };
+const mockUser = { id: 'user-admin', username: 'admin', autheliaId: 'uid-admin-001' };
 
 describe('DELETE /api/me/push/unsubscribe', () => {
   beforeEach(() => {
@@ -72,8 +72,8 @@ describe('DELETE /api/me/push/unsubscribe', () => {
   // ----------------------------------------------------------------
   // Forward Auth 인증 없음 → 401
   // ----------------------------------------------------------------
-  describe('x-authentik-uid 헤더 없음 (401 Unauthorized)', () => {
-    it('x-authentik-uid 헤더가 없으면 401을 반환해야 한다', async () => {
+  describe('Remote-User 헤더 없음 (401 Unauthorized)', () => {
+    it('Remote-User 헤더가 없으면 401을 반환해야 한다', async () => {
       const request = makeRequest({ endpoint: validEndpoint });
       const response = await DELETE(request);
       expect(response.status).toBe(401);
@@ -138,7 +138,7 @@ describe('DELETE /api/me/push/unsubscribe', () => {
   describe('소유자 검증 실패 (403 Forbidden)', () => {
     it('다른 사용자의 구독을 삭제하려고 하면 403을 반환해야 한다', async () => {
       // other-user UID로 인증했지만, 구독은 user-admin 소유
-      const otherUser = { id: 'other-user', username: 'other', authentikUid: 'uid-other-001' };
+      const otherUser = { id: 'other-user', username: 'other', autheliaId: 'uid-other-001' };
       mockUserFindUnique.mockResolvedValue(otherUser);
       const subscription = makeMockSubscription({ userId: 'user-admin' }); // 다른 사용자 소유
       mockPushSubscriptionFindUnique.mockResolvedValue(subscription);
@@ -148,7 +148,7 @@ describe('DELETE /api/me/push/unsubscribe', () => {
     });
 
     it('소유자 검증 실패 시 pushSubscription.delete를 호출하지 않아야 한다', async () => {
-      const otherUser = { id: 'other-user', username: 'other', authentikUid: 'uid-other-001' };
+      const otherUser = { id: 'other-user', username: 'other', autheliaId: 'uid-other-001' };
       mockUserFindUnique.mockResolvedValue(otherUser);
       const subscription = makeMockSubscription({ userId: 'user-admin' });
       mockPushSubscriptionFindUnique.mockResolvedValue(subscription);

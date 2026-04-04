@@ -20,10 +20,10 @@ export async function middleware(request: NextRequest): Promise<NextResponse> {
     return NextResponse.next();
   }
 
-  // /api/* 경로에서는 x-authentik-uid 헤더 존재 여부 확인
+  // /api/* 경로에서는 Remote-User 헤더 존재 여부 확인
   if (pathname.startsWith('/api/')) {
-    const authentikUid = request.headers.get('x-authentik-uid');
-    if (!authentikUid) {
+    const remoteUser = request.headers.get('Remote-User');
+    if (!remoteUser) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
   }

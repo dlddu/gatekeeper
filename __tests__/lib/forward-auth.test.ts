@@ -37,7 +37,7 @@ function makeMockUser(overrides: Record<string, unknown> = {}): Record<string, u
     id: 'user-cuid-001',
     username: 'testuser',
     email: 'test@example.com',
-    authentikUid: 'uid-test-001',
+    autheliaId: 'uid-test-001',
     displayName: 'Test User',
     createdAt: new Date('2024-01-01T00:00:00.000Z'),
     updatedAt: new Date('2024-01-01T00:00:00.000Z'),
@@ -46,10 +46,9 @@ function makeMockUser(overrides: Record<string, unknown> = {}): Record<string, u
 }
 
 const validHeaders = {
-  'x-authentik-uid': 'uid-test-001',
-  'x-authentik-username': 'testuser',
-  'x-authentik-email': 'test@example.com',
-  'x-authentik-name': 'Test User',
+  'Remote-User': 'uid-test-001',
+  'Remote-Email': 'test@example.com',
+  'Remote-Name': 'Test User',
 };
 
 describe('getForwardAuthUser', () => {
@@ -58,10 +57,10 @@ describe('getForwardAuthUser', () => {
   });
 
   // ----------------------------------------------------------------
-  // X-authentik-uid 헤더 없음 → null 반환
+  // Remote-User 헤더 없음 → null 반환
   // ----------------------------------------------------------------
-  describe('X-authentik-uid 헤더 없음 (null 반환)', () => {
-    it('x-authentik-uid 헤더가 없으면 null을 반환해야 한다', async () => {
+  describe('Remote-User 헤더 없음 (null 반환)', () => {
+    it('Remote-User 헤더가 없으면 null을 반환해야 한다', async () => {
       // Arrange
       const request = makeRequest({});
 
@@ -72,7 +71,7 @@ describe('getForwardAuthUser', () => {
       expect(result).toBeNull();
     });
 
-    it('x-authentik-uid가 없으면 DB를 조회하지 않아야 한다', async () => {
+    it('Remote-User가 없으면 DB를 조회하지 않아야 한다', async () => {
       // Arrange
       const request = makeRequest({});
 
@@ -83,12 +82,11 @@ describe('getForwardAuthUser', () => {
       expect(mockUserFindUnique).not.toHaveBeenCalled();
     });
 
-    it('다른 authentik 헤더가 있어도 uid 헤더 없으면 null을 반환해야 한다', async () => {
+    it('다른 Remote 헤더가 있어도 Remote-User 헤더 없으면 null을 반환해야 한다', async () => {
       // Arrange
       const request = makeRequest({
-        'x-authentik-username': 'testuser',
-        'x-authentik-email': 'test@example.com',
-        'x-authentik-name': 'Test User',
+        'Remote-Email': 'test@example.com',
+        'Remote-Name': 'Test User',
       });
 
       // Act
@@ -115,7 +113,7 @@ describe('getForwardAuthUser', () => {
 
       // Assert
       expect(result).not.toBeNull();
-      expect(result?.authentikUid).toBe('uid-test-001');
+      expect(result?.autheliaId).toBe('uid-test-001');
     });
 
     it('기존 사용자가 있으면 email을 업데이트해야 한다', async () => {
@@ -160,7 +158,7 @@ describe('getForwardAuthUser', () => {
       );
     });
 
-    it('업데이트는 authentikUid를 기준으로 해야 한다', async () => {
+    it('업데이트는 autheliaId를 기준으로 해야 한다', async () => {
       // Arrange
       const existingUser = makeMockUser();
       mockUserFindUnique.mockResolvedValue(existingUser);
@@ -174,7 +172,7 @@ describe('getForwardAuthUser', () => {
       expect(mockUserUpdate).toHaveBeenCalledWith(
         expect.objectContaining({
           where: expect.objectContaining({
-            authentikUid: 'uid-test-001',
+            autheliaId: 'uid-test-001',
           }),
         })
       );
@@ -228,7 +226,7 @@ describe('getForwardAuthUser', () => {
       expect(mockUserCreate).toHaveBeenCalledTimes(1);
     });
 
-    it('새 사용자 생성 시 authentikUid를 포함해야 한다', async () => {
+    it('새 사용자 생성 시 autheliaId를 포함해야 한다', async () => {
       // Arrange
       const newUser = makeMockUser();
       mockUserFindUnique.mockResolvedValue(null);
@@ -242,7 +240,7 @@ describe('getForwardAuthUser', () => {
       expect(mockUserCreate).toHaveBeenCalledWith(
         expect.objectContaining({
           data: expect.objectContaining({
-            authentikUid: 'uid-test-001',
+            autheliaId: 'uid-test-001',
           }),
         })
       );
@@ -262,7 +260,7 @@ describe('getForwardAuthUser', () => {
       expect(mockUserCreate).toHaveBeenCalledWith(
         expect.objectContaining({
           data: expect.objectContaining({
-            username: 'testuser',
+            username: 'uid-test-001',
           }),
         })
       );
@@ -342,7 +340,7 @@ describe('getForwardAuthUser', () => {
   // 헤더 추출 검증
   // ----------------------------------------------------------------
   describe('헤더 추출', () => {
-    it('x-authentik-uid 헤더로 DB를 조회해야 한다', async () => {
+    it('Remote-User 헤더로 DB를 조회해야 한다', async () => {
       // Arrange
       mockUserFindUnique.mockResolvedValue(null);
       mockUserCreate.mockResolvedValue(makeMockUser());
@@ -355,18 +353,41 @@ describe('getForwardAuthUser', () => {
       expect(mockUserFindUnique).toHaveBeenCalledWith(
         expect.objectContaining({
           where: expect.objectContaining({
-            authentikUid: 'uid-test-001',
+            autheliaId: 'uid-test-001',
           }),
         })
       );
     });
 
+    it('autheliaId로 못 찾으면 username으로 fallback 조회해야 한다', async () => {
+      // Arrange — autheliaId로 조회 실패, username으로 조회 성공 (authentik → authelia 전환 시나리오)
+      const existingUser = makeMockUser({ autheliaId: 'old-authentik-uid', username: 'uid-test-001' });
+      const updatedUser = makeMockUser({ autheliaId: 'uid-test-001', username: 'uid-test-001' });
+      mockUserFindUnique
+        .mockResolvedValueOnce(null)         // autheliaId로 조회 실패
+        .mockResolvedValueOnce(existingUser); // username으로 조회 성공
+      mockUserUpdate.mockResolvedValue(updatedUser);
+      const request = makeRequest(validHeaders);
+
+      // Act
+      const result = await getForwardAuthUser(request);
+
+      // Assert — update로 autheliaId가 갱신되어야 한다
+      expect(result).not.toBeNull();
+      expect(mockUserUpdate).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: expect.objectContaining({ username: 'uid-test-001' }),
+          data: expect.objectContaining({ autheliaId: 'uid-test-001' }),
+        })
+      );
+      expect(mockUserCreate).not.toHaveBeenCalled();
+    });
+
     it('email 헤더가 없어도 null 처리하여 사용자를 생성해야 한다', async () => {
       // Arrange
       const headersWithoutEmail = {
-        'x-authentik-uid': 'uid-test-001',
-        'x-authentik-username': 'testuser',
-        'x-authentik-name': 'Test User',
+        'Remote-User': 'uid-test-001',
+        'Remote-Name': 'Test User',
       };
       const newUser = makeMockUser({ email: null });
       mockUserFindUnique.mockResolvedValue(null);

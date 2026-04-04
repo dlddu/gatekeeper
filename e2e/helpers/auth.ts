@@ -5,13 +5,12 @@ import { type Page, type APIRequestContext } from '@playwright/test';
  *
  * DLD-827: Forward Auth 헤더 기반으로 변경
  *
- * Authentik Forward Auth 헤더를 사용하는 유틸리티
+ * Authelia Forward Auth 헤더를 사용하는 유틸리티
  */
 
 export interface AuthHeaders {
-  authentikUid: string;
-  authentikUsername: string;
-  authentikEmail: string;
+  autheliaId: string;
+  email: string;
 }
 
 /**
@@ -21,13 +20,13 @@ export interface AuthHeaders {
 export const TEST_USERS = {
   admin: {
     username: 'admin',
-    authentikUid: 'e2e-admin-uid-001',
+    autheliaId: 'e2e-admin-uid-001',
     displayName: 'E2E Test Admin',
     email: 'admin@example.com',
   },
   user: {
     username: 'testuser',
-    authentikUid: 'e2e-user-uid-001',
+    autheliaId: 'e2e-user-uid-001',
     displayName: 'E2E Test User',
     email: 'testuser@example.com',
   },
@@ -36,12 +35,11 @@ export const TEST_USERS = {
 /**
  * Forward Auth 헤더를 포함한 API 요청 옵션 생성
  */
-export function withAuthHeader(authentikUid: string, username?: string, email?: string): { headers: Record<string, string> } {
+export function withAuthHeader(autheliaId: string, username?: string, email?: string): { headers: Record<string, string> } {
   return {
     headers: {
-      'x-authentik-uid': authentikUid,
-      'x-authentik-username': username ?? '',
-      'x-authentik-email': email ?? '',
+      'Remote-User': autheliaId,
+      'Remote-Email': email ?? '',
     },
   };
 }
@@ -51,9 +49,8 @@ export function withAuthHeader(authentikUid: string, username?: string, email?: 
  */
 export async function loginAsAdmin(_request: APIRequestContext): Promise<AuthHeaders> {
   return {
-    authentikUid: TEST_USERS.admin.authentikUid,
-    authentikUsername: TEST_USERS.admin.username,
-    authentikEmail: TEST_USERS.admin.email,
+    autheliaId: TEST_USERS.admin.autheliaId,
+    email: TEST_USERS.admin.email,
   };
 }
 
@@ -62,16 +59,15 @@ export async function loginAsAdmin(_request: APIRequestContext): Promise<AuthHea
  */
 export async function loginAsTestUser(_request: APIRequestContext): Promise<AuthHeaders> {
   return {
-    authentikUid: TEST_USERS.user.authentikUid,
-    authentikUsername: TEST_USERS.user.username,
-    authentikEmail: TEST_USERS.user.email,
+    autheliaId: TEST_USERS.user.autheliaId,
+    email: TEST_USERS.user.email,
   };
 }
 
 /**
  * TEST_USERS 객체의 사용자 정보로 Forward Auth 헤더 생성
  *
- * DLD-827: 기존 loginAsAdmin(request) + withAuthHeader(auth.authentikUid) 2단계 호출을
+ * DLD-827: 기존 loginAsAdmin(request) + withAuthHeader(auth.autheliaId) 2단계 호출을
  * forwardAuthHeaders(TEST_USERS.admin) 1단계 호출로 대체합니다.
  *
  * 사용 예:
@@ -82,9 +78,9 @@ export function forwardAuthHeaders(
 ): { headers: Record<string, string> } {
   return {
     headers: {
-      'x-authentik-uid': user.authentikUid,
-      'x-authentik-username': user.username,
-      'x-authentik-email': user.email,
+      'Remote-User': user.autheliaId,
+      'Remote-Email': user.email,
+      'Remote-Name': user.displayName,
     },
   };
 }
@@ -99,13 +95,12 @@ export async function loginViaAPI(
 ): Promise<AuthHeaders> {
   // Forward Auth: set headers on all requests from this page (simulates Traefik)
   await page.setExtraHTTPHeaders({
-    'x-authentik-uid': user.authentikUid,
-    'x-authentik-username': user.username,
-    'x-authentik-email': user.email,
+    'Remote-User': user.autheliaId,
+    'Remote-Email': user.email,
+    'Remote-Name': user.displayName,
   });
   return {
-    authentikUid: user.authentikUid,
-    authentikUsername: user.username,
-    authentikEmail: user.email,
+    autheliaId: user.autheliaId,
+    email: user.email,
   };
 }

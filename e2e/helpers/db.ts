@@ -54,7 +54,7 @@ export async function createTestPrismaClient() {
  */
 export async function createTestUser(params: {
   username: string;
-  authentikUid: string;
+  autheliaId: string;
   displayName: string;
 }): Promise<TestUser> {
   const prisma = await createTestPrismaClient();
@@ -63,7 +63,7 @@ export async function createTestUser(params: {
     const user = await prisma.user.create({
       data: {
         username: params.username,
-        authentikUid: params.authentikUid,
+        autheliaId: params.autheliaId,
         displayName: params.displayName,
       },
       select: { id: true, username: true, displayName: true },

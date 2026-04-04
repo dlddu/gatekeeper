@@ -19,10 +19,10 @@ import { getForwardAuthUser } from '@/lib/forward-auth';
 
 const mockGetForwardAuthUser = getForwardAuthUser as jest.Mock;
 
-function makeRequest(authentikUid?: string): NextRequest {
+function makeRequest(autheliaId?: string): NextRequest {
   const headers: Record<string, string> = {};
-  if (authentikUid !== undefined) {
-    headers['x-authentik-uid'] = authentikUid;
+  if (autheliaId !== undefined) {
+    headers['Remote-User'] = autheliaId;
   }
   return new NextRequest('http://localhost/api/me', { headers });
 }
@@ -32,7 +32,7 @@ function makeMockUser(overrides: Record<string, unknown> = {}): Record<string, u
     id: 'user-cuid-001',
     username: 'testuser',
     email: 'test@example.com',
-    authentikUid: 'uid-test-001',
+    autheliaId: 'uid-test-001',
     displayName: 'Test User',
     createdAt: new Date('2024-01-01T00:00:00.000Z'),
     updatedAt: new Date('2024-01-01T00:00:00.000Z'),

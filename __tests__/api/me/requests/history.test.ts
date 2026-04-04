@@ -2,7 +2,7 @@
  * GET /api/me/requests/history 라우트 핸들러 테스트
  *
  * DLD-827: Forward Auth 기반으로 변경
- * x-authentik-uid 헤더로 사용자를 식별합니다.
+ * Remote-User 헤더로 사용자를 식별합니다.
  */
 
 // --- Mock 설정 ---
@@ -31,14 +31,14 @@ const mockUserUpdate = prisma.user.update as jest.Mock;
 const mockUserCreate = prisma.user.create as jest.Mock;
 const mockRequestFindMany = prisma.request.findMany as jest.Mock;
 
-function makeRequest(params?: Record<string, string>, authentikUid?: string): NextRequest {
+function makeRequest(params?: Record<string, string>, autheliaId?: string): NextRequest {
   const url = new URL('http://localhost/api/me/requests/history');
   if (params) {
     Object.entries(params).forEach(([key, value]) => url.searchParams.set(key, value));
   }
   const headers: Record<string, string> = {};
-  if (authentikUid !== undefined) {
-    headers['x-authentik-uid'] = authentikUid;
+  if (autheliaId !== undefined) {
+    headers['Remote-User'] = autheliaId;
   }
   return new NextRequest(url, { headers });
 }
@@ -59,7 +59,7 @@ function makeMockRequest(overrides: Record<string, unknown> = {}): Record<string
   };
 }
 
-const mockUser = { id: 'user-admin', username: 'admin', authentikUid: 'uid-admin-001' };
+const mockUser = { id: 'user-admin', username: 'admin', autheliaId: 'uid-admin-001' };
 
 describe('GET /api/me/requests/history', () => {
   beforeEach(() => {
@@ -71,8 +71,8 @@ describe('GET /api/me/requests/history', () => {
   // ----------------------------------------------------------------
   // Forward Auth 인증 없음 → 401
   // ----------------------------------------------------------------
-  describe('x-authentik-uid 헤더 없음 (401 Unauthorized)', () => {
-    it('x-authentik-uid 헤더가 없으면 401을 반환해야 한다', async () => {
+  describe('Remote-User 헤더 없음 (401 Unauthorized)', () => {
+    it('Remote-User 헤더가 없으면 401을 반환해야 한다', async () => {
       const request = makeRequest();
       const response = await GET(request);
       expect(response.status).toBe(401);
@@ -96,7 +96,7 @@ describe('GET /api/me/requests/history', () => {
   // 정상 목록 조회 → 200
   // ----------------------------------------------------------------
   describe('정상 목록 조회 (200 OK)', () => {
-    it('유효한 x-authentik-uid로 요청하면 200을 반환해야 한다', async () => {
+    it('유효한 Remote-User로 요청하면 200을 반환해야 한다', async () => {
       mockUserFindUnique.mockResolvedValue(mockUser);
       mockRequestFindMany.mockResolvedValue([]);
       const request = makeRequest(undefined, 'uid-admin-001');

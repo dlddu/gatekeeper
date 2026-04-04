@@ -359,6 +359,30 @@ describe('getForwardAuthUser', () => {
       );
     });
 
+    it('autheliaId로 못 찾으면 username으로 fallback 조회해야 한다', async () => {
+      // Arrange — autheliaId로 조회 실패, username으로 조회 성공 (authentik → authelia 전환 시나리오)
+      const existingUser = makeMockUser({ autheliaId: 'old-authentik-uid', username: 'uid-test-001' });
+      const updatedUser = makeMockUser({ autheliaId: 'uid-test-001', username: 'uid-test-001' });
+      mockUserFindUnique
+        .mockResolvedValueOnce(null)         // autheliaId로 조회 실패
+        .mockResolvedValueOnce(existingUser); // username으로 조회 성공
+      mockUserUpdate.mockResolvedValue(updatedUser);
+      const request = makeRequest(validHeaders);
+
+      // Act
+      const result = await getForwardAuthUser(request);
+
+      // Assert — update로 autheliaId가 갱신되어야 한다
+      expect(result).not.toBeNull();
+      expect(mockUserUpdate).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: expect.objectContaining({ username: 'uid-test-001' }),
+          data: expect.objectContaining({ autheliaId: 'uid-test-001' }),
+        })
+      );
+      expect(mockUserCreate).not.toHaveBeenCalled();
+    });
+
     it('email 헤더가 없어도 null 처리하여 사용자를 생성해야 한다', async () => {
       // Arrange
       const headersWithoutEmail = {

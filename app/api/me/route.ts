@@ -14,5 +14,6 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
     email: user.email,
     displayName: user.displayName,
     autheliaId: user.autheliaId,
+    autoResponseMode: user.autoResponseMode,
   });
 }

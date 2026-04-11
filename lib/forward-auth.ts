@@ -7,6 +7,7 @@ export type ForwardAuthUser = {
   email: string | null;
   autheliaId: string;
   displayName: string;
+  autoResponseMode: 'NONE' | 'AUTO_APPROVE' | 'AUTO_REJECT';
   createdAt: Date;
   updatedAt: Date;
 };

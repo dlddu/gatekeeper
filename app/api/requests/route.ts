@@ -27,9 +27,10 @@ export async function POST(request: NextRequest): Promise<Response> {
   }
 
   // userId가 제공된 경우 존재하는 사용자인지 검증
+  let targetUser: { id: string; autoResponseMode: string } | null = null;
   if (userId) {
-    const user = await prisma.user.findUnique({ where: { id: userId } });
-    if (!user) {
+    targetUser = await prisma.user.findUnique({ where: { id: userId } });
+    if (!targetUser) {
       return new Response(JSON.stringify({ error: 'User not found' }), {
         status: 400,
         headers: { 'Content-Type': 'application/json' },
@@ -43,6 +44,11 @@ export async function POST(request: NextRequest): Promise<Response> {
       ? new Date(now.getTime() + timeoutSeconds * 1000)
       : null;
 
+    // 자동 응답 모드 확인
+    const autoMode = targetUser?.autoResponseMode;
+    const isAutoResponse = autoMode === 'AUTO_APPROVE' || autoMode === 'AUTO_REJECT';
+    const autoStatus = autoMode === 'AUTO_APPROVE' ? 'APPROVED' : autoMode === 'AUTO_REJECT' ? 'REJECTED' : undefined;
+
     const created = await prisma.request.create({
       data: {
         externalId,
@@ -50,11 +56,16 @@ export async function POST(request: NextRequest): Promise<Response> {
         requesterName,
         timeoutSeconds: timeoutSeconds ?? null,
         expiresAt,
+        ...(isAutoResponse && autoStatus ? {
+          status: autoStatus,
+          processedAt: now,
+          processedById: userId,
+        } : {}),
       },
     });
 
-    // userId가 제공된 경우 해당 사용자에게 Push 알림 발송 시도
-    if (userId) {
+    // 자동 응답이 아닌 경우에만 Push 알림 발송
+    if (userId && !isAutoResponse) {
       try {
         const pushSubscriptions = await prisma.pushSubscription.findMany({
           where: { userId },
@@ -88,6 +99,8 @@ export async function POST(request: NextRequest): Promise<Response> {
         timeoutSeconds: created.timeoutSeconds,
         expiresAt: created.expiresAt,
         createdAt: created.createdAt,
+        ...(autoMode === 'AUTO_REJECT' ? { autoRejected: true } : {}),
+        ...(autoMode === 'AUTO_APPROVE' ? { autoApproved: true } : {}),
       }),
       {
         status: 201,

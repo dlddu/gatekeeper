@@ -17,13 +17,31 @@ function urlBase64ToUint8Array(base64String: string): Uint8Array<ArrayBuffer> {
   return outputArray;
 }
 
+type AutoResponseMode = 'NONE' | 'AUTO_APPROVE' | 'AUTO_REJECT';
+
 export default function SettingsPage() {
   const [isSubscribed, setIsSubscribed] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [isUnsupported, setIsUnsupported] = useState(false);
   const [isDenied, setIsDenied] = useState(false);
+  const [autoResponseMode, setAutoResponseMode] = useState<AutoResponseMode>('NONE');
+  const [isAutoResponseLoading, setIsAutoResponseLoading] = useState(true);
 
   useEffect(() => {
+    async function initAutoResponseMode() {
+      try {
+        const response = await fetch('/api/me');
+        if (response.ok) {
+          const data = await response.json();
+          setAutoResponseMode(data.autoResponseMode ?? 'NONE');
+        }
+      } catch {
+        // 기본 상태 유지
+      } finally {
+        setIsAutoResponseLoading(false);
+      }
+    }
+
     async function initPushState() {
       try {
         if (
@@ -58,6 +76,7 @@ export default function SettingsPage() {
     }
 
     initPushState();
+    initAutoResponseMode();
   }, []);
 
   async function handleToggle() {
@@ -142,6 +161,33 @@ export default function SettingsPage() {
     if (isDenied) return '브라우저에서 알림 권한이 차단되었습니다';
     if (isSubscribed) return '알림이 활성화되어 있습니다';
     return 'Push 알림을 활성화하면 승인 요청 알림을 받을 수 있습니다';
+  }
+
+  async function handleAutoResponseChange(mode: AutoResponseMode) {
+    if (isAutoResponseLoading || mode === autoResponseMode) return;
+
+    setIsAutoResponseLoading(true);
+    try {
+      const response = await fetch('/api/me/auto-response-mode', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ mode }),
+      });
+
+      if (response.ok) {
+        setAutoResponseMode(mode);
+      }
+    } catch {
+      // 에러 시 상태 유지
+    } finally {
+      setIsAutoResponseLoading(false);
+    }
+  }
+
+  function getAutoResponseMessage(): string {
+    if (autoResponseMode === 'AUTO_APPROVE') return '새로운 요청이 자동으로 승인됩니다';
+    if (autoResponseMode === 'AUTO_REJECT') return '새로운 요청이 자동으로 거부됩니다';
+    return '수동으로 요청을 승인하거나 거부합니다';
   }
 
   const isDisabled = isLoading || isUnsupported || isDenied;
@@ -243,6 +289,77 @@ export default function SettingsPage() {
             </button>
           </div>
           {isLoading && (
+            <p
+              className="text-xs text-gray-400 mt-2"
+              style={{ fontSize: '0.75rem', color: '#9ca3af', marginTop: '0.5rem' }}
+            >
+              로딩 중...
+            </p>
+          )}
+        </div>
+        <div
+          className="bg-white rounded-xl border border-gray-200 p-4 mt-3"
+          style={{
+            backgroundColor: '#ffffff',
+            borderRadius: '0.75rem',
+            border: '1px solid #e5e7eb',
+            padding: '1rem',
+            marginTop: '0.75rem',
+          }}
+        >
+          <div>
+            <p
+              className="text-sm font-medium text-gray-900"
+              style={{ fontSize: '0.875rem', fontWeight: 500, color: '#111827' }}
+            >
+              자동 응답 모드
+            </p>
+            <p
+              className="text-xs text-gray-500 mt-1"
+              style={{ fontSize: '0.75rem', color: '#6b7280', marginTop: '0.25rem' }}
+            >
+              {getAutoResponseMessage()}
+            </p>
+          </div>
+          <div
+            className="flex gap-2 mt-3"
+            style={{ display: 'flex', gap: '0.5rem', marginTop: '0.75rem' }}
+          >
+            {([
+              { mode: 'NONE' as AutoResponseMode, label: '없음', color: '#6b7280', activeColor: '#374151' },
+              { mode: 'AUTO_APPROVE' as AutoResponseMode, label: '자동 승인', color: '#059669', activeColor: '#059669' },
+              { mode: 'AUTO_REJECT' as AutoResponseMode, label: '자동 거부', color: '#dc2626', activeColor: '#dc2626' },
+            ]).map(({ mode, label, color, activeColor }) => {
+              const isActive = autoResponseMode === mode;
+              return (
+                <button
+                  key={mode}
+                  onClick={() => handleAutoResponseChange(mode)}
+                  disabled={isAutoResponseLoading}
+                  className="flex-1 py-2 px-3 rounded-lg text-sm font-medium transition-colors"
+                  style={{
+                    flex: 1,
+                    paddingTop: '0.5rem',
+                    paddingBottom: '0.5rem',
+                    paddingLeft: '0.75rem',
+                    paddingRight: '0.75rem',
+                    borderRadius: '0.5rem',
+                    fontSize: '0.875rem',
+                    fontWeight: 500,
+                    border: isActive ? `2px solid ${activeColor}` : '2px solid #e5e7eb',
+                    backgroundColor: isActive ? `${color}14` : '#ffffff',
+                    color: isActive ? activeColor : '#6b7280',
+                    cursor: isAutoResponseLoading ? 'not-allowed' : 'pointer',
+                    opacity: isAutoResponseLoading ? 0.5 : 1,
+                    transition: 'all 0.2s',
+                  }}
+                >
+                  {label}
+                </button>
+              );
+            })}
+          </div>
+          {isAutoResponseLoading && (
             <p
               className="text-xs text-gray-400 mt-2"
               style={{ fontSize: '0.75rem', color: '#9ca3af', marginTop: '0.5rem' }}

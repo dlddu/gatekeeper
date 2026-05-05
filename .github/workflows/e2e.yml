@@ -37,6 +37,14 @@ jobs:
         env:
           DATABASE_URL: file:./e2e-test.db
 
+      # Next.js 프로덕션 빌드 (Playwright webServer가 `npm run start`로 기동)
+      - name: Build Next.js application
+        run: npm run build
+        env:
+          # next.config.ts의 rewrite 대상이 빌드 시점에 결정됨
+          GO_BACKEND_URL: http://127.0.0.1:3002
+          NEXT_PUBLIC_VAPID_PUBLIC_KEY: ${{ secrets.E2E_VAPID_PUBLIC_KEY || 'BEl62iUYgUivxIkv69yViEuiBIa-Ib9-SkvMeAtA3LFgDzkrxZJjSgSnfckjBJuBkr3qBUYIHBQFLXYp5Nksh8U' }}
+
       # Playwright 브라우저 캐시 (CI 빌드 시간 단축)
       - name: Get Playwright version
         id: playwright-version

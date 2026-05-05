@@ -4,14 +4,21 @@ import path from 'path';
 /**
  * Playwright E2E 테스트 설정
  *
- * Go 백엔드(`backend/`)를 직접 빌드한 뒤 webServer로 실행합니다.
- * globalSetup이 prisma db push로 테스트 DB 스키마를 생성하고 seed 데이터를
- * 삽입한 뒤, Go 바이너리는 같은 SQLite 파일을 그대로 사용합니다.
+ * 두 webServer를 띄웁니다:
+ *  1. Go 백엔드(`backend/gatekeeper-e2e`): /api/* 처리, 포트 3002
+ *  2. Next.js 프로덕션 서버(`npm run start`): 페이지 렌더링, 포트 3001
+ *     (next.config.ts의 rewrite 규칙이 /api/*를 Go 백엔드로 프록시)
+ *
+ * globalSetup이 prisma db push로 테스트 DB 스키마를 만들고 시드 데이터를
+ * 삽입하면, Go 백엔드는 같은 SQLite 파일을 그대로 사용합니다.
  */
 
 const baseURL = process.env.E2E_BASE_URL ?? 'http://localhost:3001';
 const testDBPath = path.resolve(__dirname, 'e2e-test.db');
 const goBinary = path.resolve(__dirname, 'backend', 'gatekeeper-e2e');
+
+const goPort = '3002';
+const nextPort = '3001';
 
 export default defineConfig({
   testDir: './e2e',
@@ -66,22 +73,39 @@ export default defineConfig({
     },
   ],
 
-  // Go 백엔드 자동 기동 (사전에 backend/gatekeeper-e2e 바이너리 빌드 필요)
-  webServer: {
-    command: `${goBinary}`,
-    url: `${baseURL}/api/health`,
-    reuseExistingServer: !process.env.CI,
-    timeout: 60_000,
-    env: {
-      DATABASE_URL: `file:${testDBPath}`,
-      API_SECRET_KEY: 'e2e-test-api-key-valid',
-      VAPID_PUBLIC_KEY: 'BEl62iUYgUivxIkv69yViEuiBIa-Ib9-SkvMeAtA3LFgDzkrxZJjSgSnfckjBJuBkr3qBUYIHBQFLXYp5Nksh8U',
-      VAPID_PRIVATE_KEY: 'UUxI4O8-HoGs86_GBRhFxGMpHMTKJmEXAZMFnTa5YCc',
-      VAPID_SUBJECT: 'mailto:e2e-test@example.com',
-      PORT: '3001',
-      HOSTNAME: '127.0.0.1',
+  webServer: [
+    {
+      // Go 백엔드 (사전에 backend/gatekeeper-e2e 빌드 필요)
+      command: goBinary,
+      url: `http://127.0.0.1:${goPort}/api/health`,
+      reuseExistingServer: !process.env.CI,
+      timeout: 60_000,
+      env: {
+        DATABASE_URL: `file:${testDBPath}`,
+        API_SECRET_KEY: 'e2e-test-api-key-valid',
+        VAPID_PUBLIC_KEY: 'BEl62iUYgUivxIkv69yViEuiBIa-Ib9-SkvMeAtA3LFgDzkrxZJjSgSnfckjBJuBkr3qBUYIHBQFLXYp5Nksh8U',
+        VAPID_PRIVATE_KEY: 'UUxI4O8-HoGs86_GBRhFxGMpHMTKJmEXAZMFnTa5YCc',
+        VAPID_SUBJECT: 'mailto:e2e-test@example.com',
+        PORT: goPort,
+        HOSTNAME: '127.0.0.1',
+      },
     },
-  },
+    {
+      // Next.js 프로덕션 서버 (사전 `npm run build` 필요)
+      command: 'npm run start',
+      url: `${baseURL}/`,
+      reuseExistingServer: !process.env.CI,
+      timeout: 120_000,
+      env: {
+        PORT: nextPort,
+        // /api/* 요청은 next.config.ts rewrite를 통해 Go 백엔드로 프록시.
+        // (rewrite 대상은 빌드 시 결정되므로 build 단계에서도 동일 값을 줘야 함.)
+        GO_BACKEND_URL: `http://127.0.0.1:${goPort}`,
+        NEXT_PUBLIC_VAPID_PUBLIC_KEY: 'BEl62iUYgUivxIkv69yViEuiBIa-Ib9-SkvMeAtA3LFgDzkrxZJjSgSnfckjBJuBkr3qBUYIHBQFLXYp5Nksh8U',
+        NODE_ENV: 'production',
+      },
+    },
+  ],
 });
 
 export { testDBPath };

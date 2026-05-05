@@ -1,51 +1,27 @@
-# Stage 1: Dependencies
-FROM node:20-alpine AS deps
-RUN apk add --no-cache libc6-compat
+# Stage 1: Build Go backend
+FROM golang:1.24-alpine AS builder
+WORKDIR /src
+
+# Cache modules separately so dependency downloads can be reused.
+COPY backend/go.mod backend/go.sum ./
+RUN go mod download
+
+COPY backend/ ./
+RUN CGO_ENABLED=0 GOOS=linux go build -trimpath -ldflags="-s -w" -o /out/gatekeeper .
+
+# Stage 2: Minimal runtime image
+FROM alpine:3.20 AS runner
+RUN apk add --no-cache ca-certificates tzdata \
+    && addgroup --system --gid 1001 gatekeeper \
+    && adduser --system --uid 1001 --ingroup gatekeeper gatekeeper
+
 WORKDIR /app
+COPY --from=builder /out/gatekeeper /app/gatekeeper
 
-COPY package.json package-lock.json ./
-RUN npm ci
-
-# Stage 2: Builder
-FROM node:20-alpine AS builder
-WORKDIR /app
-COPY --from=deps /app/node_modules ./node_modules
-COPY . .
-
-ENV NEXT_TELEMETRY_DISABLED=1
-ARG NEXT_PUBLIC_VAPID_PUBLIC_KEY
-ENV NEXT_PUBLIC_VAPID_PUBLIC_KEY=$NEXT_PUBLIC_VAPID_PUBLIC_KEY
-
-RUN npx prisma generate
-RUN npm run build
-
-# Stage 3: Runner
-FROM node:20-alpine AS runner
-WORKDIR /app
-
-ENV NODE_ENV=production
-ENV NEXT_TELEMETRY_DISABLED=1
-
-RUN addgroup --system --gid 1001 nodejs
-RUN adduser --system --uid 1001 nextjs
-
-COPY --from=builder /app/public ./public
-
-# Leverage output traces to reduce image size
-COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
-COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
-
-# Prisma CLI for DB migrations (used by init container)
-COPY --from=builder /app/prisma ./prisma
-COPY --from=builder /app/prisma.config.ts ./prisma.config.ts
-COPY --from=builder /app/scripts/db-migrate.sh ./scripts/db-migrate.sh
-RUN npm install prisma
-
-USER nextjs
+USER gatekeeper
 
 EXPOSE 3000
-
 ENV PORT=3000
-ENV HOSTNAME="0.0.0.0"
+ENV HOSTNAME=0.0.0.0
 
-CMD ["node", "server.js"]
+ENTRYPOINT ["/app/gatekeeper"]

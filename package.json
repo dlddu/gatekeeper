@@ -9,24 +9,14 @@
     "lint": "eslint",
     "test": "jest",
     "test:watch": "jest --watch",
-    "test:coverage": "jest --coverage",
-    "test:e2e": "npx playwright test",
-    "test:e2e:ui": "npx playwright test --ui",
-    "test:e2e:report": "npx playwright show-report"
+    "test:coverage": "jest --coverage"
   },
   "dependencies": {
-    "@libsql/client": "^0.17.0",
-    "@prisma/adapter-libsql": "^7.4.2",
-    "@prisma/client": "^7.4.2",
-    "@types/web-push": "^3.6.4",
     "next": "16.1.6",
-    "prisma": "^7.4.2",
     "react": "19.2.3",
-    "react-dom": "19.2.3",
-    "web-push": "^3.6.7"
+    "react-dom": "19.2.3"
   },
   "devDependencies": {
-    "@playwright/test": "^1.49.0",
     "@babel/core": "^7.29.0",
     "@babel/preset-env": "^7.29.0",
     "@types/jest": "^30.0.0",

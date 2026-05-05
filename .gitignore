@@ -28,9 +28,9 @@ yarn-error.log*
 
 # Database files
 *.db
+*.db-wal
+*.db-shm
 dev.db
-prisma/*.db
-prisma/dev.db
 
 # Vercel deployment
 .vercel
@@ -42,11 +42,6 @@ next-env.d.ts
 # Testing
 coverage/
 
-# Playwright E2E
-playwright-report/
-test-results/
-e2e-test.db
-e2e-test.db-wal
-e2e-test.db-shm
+# Go build artifacts
+backend/gatekeeper
 
-# Prisma generated client (migrations are tracked in version control)

@@ -47,15 +47,13 @@ jobs:
           kubectl apply -f k8s/pvc.yaml
           kubectl apply -f k8s/service.yaml
 
-          # 로컬 이미지 사용하도록 deployment 수정 후 배포
-          sed 's|ghcr.io/dlddu/gatekeeper:latest|gatekeeper:e2e|g' k8s/deployment.yaml \
-            | kubectl apply -f -
-
-          # Kind는 로컬 이미지를 사용하므로 imagePullPolicy를 Never로 설정
-          kubectl patch deployment gatekeeper --type=json \
-            -p='[
-              {"op":"replace","path":"/spec/template/spec/containers/0/imagePullPolicy","value":"Never"}
-            ]'
+          # image 치환 + imagePullPolicy 삽입을 한 번의 apply 로 처리.
+          # apply 후 patch 로 template 을 또 수정하면 rolling update 가
+          # 한 번 더 발생해 terminating/new pod 가 동시에 ready 라벨에
+          # 매치, 후속 kubectl wait 가 timeout 된다.
+          sed -e 's|ghcr.io/dlddu/gatekeeper:latest|gatekeeper:e2e|g' \
+              -e '/image: gatekeeper:e2e/a\          imagePullPolicy: Never' \
+              k8s/deployment.yaml | kubectl apply -f -
 
       # 배포 전 상태 확인
       - name: Debug pre-rollout state

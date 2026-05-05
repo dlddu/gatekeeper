@@ -63,6 +63,12 @@ func New(db *sql.DB, cfg *config.Config) *http.Server {
 		r.With(auth.RequireAPIKey(cfg.APISecretKey)).Post("/push/send", pushH.Send)
 	})
 
+	// Next.js 정적 산출물(`out/`)을 직접 서빙. STATIC_DIR 미설정이면 마운트 생략.
+	if cfg.StaticDir != "" {
+		staticH := handlers.StaticHandler(cfg.StaticDir)
+		r.NotFound(staticH.ServeHTTP)
+	}
+
 	return &http.Server{
 		Addr:              cfg.ListenAddr,
 		Handler:           r,

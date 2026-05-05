@@ -12,6 +12,7 @@ type Config struct {
 	VAPIDSubject    string
 	VAPIDPublicKey  string
 	VAPIDPrivateKey string
+	StaticDir       string
 	Env             string
 }
 
@@ -23,6 +24,7 @@ func Load() *Config {
 		VAPIDSubject:    os.Getenv("VAPID_SUBJECT"),
 		VAPIDPublicKey:  os.Getenv("VAPID_PUBLIC_KEY"),
 		VAPIDPrivateKey: os.Getenv("VAPID_PRIVATE_KEY"),
+		StaticDir:       os.Getenv("STATIC_DIR"),
 		Env:             getEnv("ENV", getEnv("NODE_ENV", "development")),
 	}
 }

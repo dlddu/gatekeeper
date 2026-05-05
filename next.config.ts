@@ -1,33 +1,11 @@
 import type { NextConfig } from "next";
 
-// Go 백엔드 위치 — 빌드 시 GO_BACKEND_URL로 오버라이드 가능.
-const apiTarget = process.env.GO_BACKEND_URL ?? "http://127.0.0.1:3000";
-
 const nextConfig: NextConfig = {
-  async headers() {
-    return [
-      {
-        source: "/sw.js",
-        headers: [
-          {
-            key: "Service-Worker-Allowed",
-            value: "/",
-          },
-          {
-            key: "Cache-Control",
-            value: "no-cache, no-store, must-revalidate",
-          },
-        ],
-      },
-    ];
-  },
-  async rewrites() {
-    return [
-      {
-        source: "/api/:path*",
-        destination: `${apiTarget}/api/:path*`,
-      },
-    ];
+  // Go 백엔드가 정적 산출물(`out/`)을 함께 서빙하므로 정적 export.
+  output: "export",
+  trailingSlash: true,
+  images: {
+    unoptimized: true,
   },
 };
 

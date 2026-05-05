@@ -2,11 +2,13 @@ package push
 
 import (
 	"context"
+	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"io"
 	"log"
 	"net/http"
+	"strings"
 
 	webpush "github.com/SherClockHolmes/webpush-go"
 	"github.com/dlddu/gatekeeper/backend/internal/models"
@@ -20,8 +22,56 @@ type Service struct {
 	privateKey string
 }
 
+// NewService normalizes VAPID values so they match the format push services
+// expect, hiding differences between web-push (Node) and webpush-go.
+//
+//   - subject: web-push silently accepted bare emails, webpush-go does not.
+//     A value like "admin@example.com" gets a "mailto:" prefix.
+//   - keys: VAPID spec mandates base64url-no-pad. web-push converted any
+//     base64 input internally; webpush-go passes the string through into
+//     the `k=` Authorization parameter, so a value with `+`, `/`, or `=`
+//     causes Mozilla autopush to reject the JWT with `BadJwtToken`.
 func NewService(subject, publicKey, privateKey string) *Service {
-	return &Service{subject: subject, publicKey: publicKey, privateKey: privateKey}
+	return &Service{
+		subject:    normalizeSubject(subject),
+		publicKey:  normalizeBase64URL(publicKey),
+		privateKey: normalizeBase64URL(privateKey),
+	}
+}
+
+func normalizeSubject(s string) string {
+	s = strings.TrimSpace(s)
+	if s == "" {
+		return s
+	}
+	lower := strings.ToLower(s)
+	if strings.HasPrefix(lower, "mailto:") || strings.HasPrefix(lower, "https://") || strings.HasPrefix(lower, "http://") {
+		return s
+	}
+	if strings.Contains(s, "@") {
+		return "mailto:" + s
+	}
+	return s
+}
+
+// normalizeBase64URL re-encodes any standard / URL-safe / padded variant of
+// base64 into RawURLEncoding (URL-safe, no padding) — the form VAPID requires.
+func normalizeBase64URL(s string) string {
+	s = strings.TrimSpace(s)
+	if s == "" {
+		return s
+	}
+	for _, dec := range []*base64.Encoding{
+		base64.RawURLEncoding,
+		base64.URLEncoding,
+		base64.RawStdEncoding,
+		base64.StdEncoding,
+	} {
+		if raw, err := dec.DecodeString(s); err == nil {
+			return base64.RawURLEncoding.EncodeToString(raw)
+		}
+	}
+	return s
 }
 
 func (s *Service) configured() error {

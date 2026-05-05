@@ -3,13 +3,16 @@ package push
 import "testing"
 
 func TestNormalizeSubject(t *testing.T) {
+	// webpush-go 가 내부적으로 "mailto:" 를 붙이므로, 우리가 넘기는 값은
+	// 이메일은 prefix 없이, http(s) URL 은 그대로여야 한다.
 	cases := map[string]string{
 		"":                                "",
-		"mailto:admin@example.com":        "mailto:admin@example.com",
-		"  mailto:admin@example.com  ":    "mailto:admin@example.com",
+		"mailto:admin@example.com":        "admin@example.com",
+		"  mailto:admin@example.com  ":    "admin@example.com",
+		"MAILTO:admin@example.com":        "admin@example.com",
+		"admin@example.com":               "admin@example.com",
 		"https://gatekeeper.example.com":  "https://gatekeeper.example.com",
-		"admin@example.com":               "mailto:admin@example.com",
-		"MAILTO:admin@example.com":        "MAILTO:admin@example.com",
+		"http://gatekeeper.local":         "http://gatekeeper.local",
 	}
 	for in, want := range cases {
 		if got := normalizeSubject(in); got != want {

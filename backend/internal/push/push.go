@@ -39,17 +39,27 @@ func NewService(subject, publicKey, privateKey string) *Service {
 	}
 }
 
+// normalizeSubject prepares VAPID_SUBJECT for SherClockHolmes/webpush-go.
+//
+// webpush-go internally prepends "mailto:" to any subscriber that doesn't
+// start with "https:" — so passing an already-prefixed value like
+// "mailto:admin@example.com" results in the doubly-prefixed JWT claim
+// `sub: "mailto:mailto:admin@example.com"`, which Mozilla autopush rejects
+// with `BadJwtToken` (403).
+//
+// Strip a leading "mailto:" so webpush-go can add exactly one back; pass
+// http(s) URLs through unchanged.
 func normalizeSubject(s string) string {
 	s = strings.TrimSpace(s)
 	if s == "" {
 		return s
 	}
 	lower := strings.ToLower(s)
-	if strings.HasPrefix(lower, "mailto:") || strings.HasPrefix(lower, "https://") || strings.HasPrefix(lower, "http://") {
+	if strings.HasPrefix(lower, "https://") || strings.HasPrefix(lower, "http://") {
 		return s
 	}
-	if strings.Contains(s, "@") {
-		return "mailto:" + s
+	if strings.HasPrefix(lower, "mailto:") {
+		return s[len("mailto:"):]
 	}
 	return s
 }

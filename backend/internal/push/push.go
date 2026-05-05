@@ -41,6 +41,10 @@ type SendOptions struct {
 	OnSuccess func()
 }
 
+// defaultTTL 은 web-push (Node) 의 기본값(4주) 을 그대로 따라간다.
+// SherClockHolmes/webpush-go 는 TTL 기본값이 0(즉시 폐기) 이라 명시적으로 줘야 한다.
+const defaultTTL = 60 * 60 * 24 * 28
+
 // Send delivers a notification to each subscription, mirroring the behavior of
 // lib/push.ts: failures are logged and skipped, expirations trigger OnExpired.
 func (s *Service) Send(ctx context.Context, opts SendOptions) error {
@@ -68,16 +72,16 @@ func (s *Service) Send(ctx context.Context, opts SendOptions) error {
 			Subscriber:      s.subject,
 			VAPIDPublicKey:  s.publicKey,
 			VAPIDPrivateKey: s.privateKey,
-			TTL:             30,
+			TTL:             defaultTTL,
 		})
 		if sendErr != nil {
 			failCount++
 			log.Printf("[Push] 발송 실패: endpoint=%s, error=%v", sub.Endpoint, sendErr)
 			continue
 		}
+
 		statusCode := resp.StatusCode
-		// Drain and close the response body to allow connection reuse.
-		_, _ = io.Copy(io.Discard, resp.Body)
+		bodyBytes, _ := io.ReadAll(resp.Body)
 		_ = resp.Body.Close()
 
 		if statusCode == http.StatusGone { // 410: 구독 만료
@@ -99,9 +103,17 @@ func (s *Service) Send(ctx context.Context, opts SendOptions) error {
 		}
 
 		failCount++
-		log.Printf("[Push] 발송 실패: endpoint=%s, statusCode=%d", sub.Endpoint, statusCode)
+		log.Printf("[Push] 발송 실패: endpoint=%s, statusCode=%d, body=%s",
+			sub.Endpoint, statusCode, truncate(string(bodyBytes), 500))
 	}
 
 	log.Printf("[Push] 발송 완료: 성공=%d, 실패=%d, 만료=%d", successCount, failCount, expiredCount)
 	return nil
+}
+
+func truncate(s string, n int) string {
+	if len(s) <= n {
+		return s
+	}
+	return s[:n] + "...(truncated)"
 }

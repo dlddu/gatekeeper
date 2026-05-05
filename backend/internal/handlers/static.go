@@ -31,12 +31,17 @@ func StaticHandler(rootDir string) http.Handler {
 			return
 		}
 
-		// Dynamic route fallback: /requests/<anything>/ → placeholder shell.
-		if strings.HasPrefix(urlPath, "/requests/") && urlPath != "/requests" {
-			fallback := filepath.Join(rootDir, "requests", "_placeholder", "index.html")
-			if _, err := os.Stat(fallback); err == nil {
-				serveFile(w, r, fallback)
-				return
+		// Dynamic route fallback: /requests/<anything> → placeholder shell.
+		if strings.HasPrefix(urlPath, "/requests/") && urlPath != "/requests" && urlPath != "/requests/" {
+			candidates := []string{
+				filepath.Join(rootDir, "requests", "_placeholder.html"),
+				filepath.Join(rootDir, "requests", "_placeholder", "index.html"),
+			}
+			for _, candidate := range candidates {
+				if _, err := os.Stat(candidate); err == nil {
+					serveFile(w, r, candidate)
+					return
+				}
 			}
 		}
 

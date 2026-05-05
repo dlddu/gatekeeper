@@ -115,6 +115,50 @@ func TestStaticDynamicRouteFallback(t *testing.T) {
 	}
 }
 
+// trailingSlash:false 빌드는 placeholder 가 _placeholder.html (디렉토리 없는
+// 평면 파일) 로 떨어진다. fallback 이 그 layout 도 처리해야 한다.
+func TestStaticDynamicRouteFlatPlaceholder(t *testing.T) {
+	dir := t.TempDir()
+	dbPath := filepath.Join(dir, "test.db")
+	conn, err := db.Open(dbPath)
+	if err != nil {
+		t.Fatalf("open db: %v", err)
+	}
+	defer conn.Close()
+	if err := db.Migrate(conn); err != nil {
+		t.Fatalf("migrate: %v", err)
+	}
+
+	staticDir := filepath.Join(dir, "out")
+	if err := os.MkdirAll(filepath.Join(staticDir, "requests"), 0o755); err != nil {
+		t.Fatalf("mkdir: %v", err)
+	}
+	if err := os.WriteFile(filepath.Join(staticDir, "index.html"), []byte("home"), 0o644); err != nil {
+		t.Fatalf("write index: %v", err)
+	}
+	if err := os.WriteFile(filepath.Join(staticDir, "requests", "_placeholder.html"), []byte("<html>flat shell</html>"), 0o644); err != nil {
+		t.Fatalf("write placeholder: %v", err)
+	}
+
+	cfg := &config.Config{
+		ListenAddr:   "127.0.0.1:0",
+		DatabaseURL:  dbPath,
+		APISecretKey: "test-key",
+		StaticDir:    staticDir,
+	}
+	srv := New(conn, cfg)
+	ts := httptest.NewServer(srv.Handler)
+	defer ts.Close()
+
+	resp, body := mustGet(t, ts.URL+"/requests/abc")
+	if resp.StatusCode != http.StatusOK {
+		t.Fatalf("status = %d", resp.StatusCode)
+	}
+	if body != "<html>flat shell</html>" {
+		t.Fatalf("body = %q", body)
+	}
+}
+
 func TestStaticAPIStillRoutes(t *testing.T) {
 	ts, _, cleanup := setupStaticServer(t)
 	defer cleanup()

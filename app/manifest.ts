@@ -1,5 +1,8 @@
 import type { MetadataRoute } from 'next';
 
+// output: export 모드에서 manifest 라우트를 정적으로 빌드하기 위해 필요.
+export const dynamic = 'force-static';
+
 export default function manifest(): MetadataRoute.Manifest {
   return {
     name: 'Gatekeeper',

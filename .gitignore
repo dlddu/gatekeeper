@@ -28,6 +28,8 @@ yarn-error.log*
 
 # Database files
 *.db
+*.db-wal
+*.db-shm
 dev.db
 prisma/*.db
 prisma/dev.db
@@ -49,4 +51,7 @@ e2e-test.db
 e2e-test.db-wal
 e2e-test.db-shm
 
-# Prisma generated client (migrations are tracked in version control)
+# Go build artifacts
+backend/gatekeeper
+backend/gatekeeper-e2e
+

@@ -15,23 +15,13 @@ spec:
       labels:
         app: gatekeeper
     spec:
-      initContainers:
-        - name: prisma-migrate
-          image: ghcr.io/dlddu/gatekeeper:latest
-          command: ["sh", "scripts/db-migrate.sh"]
-          env:
-            - name: DATABASE_URL
-              value: "file:/app/data/gatekeeper.db"
-          volumeMounts:
-            - name: data
-              mountPath: /app/data
       containers:
         - name: gatekeeper
           image: ghcr.io/dlddu/gatekeeper:latest
           ports:
             - containerPort: 3000
           env:
-            - name: NODE_ENV
+            - name: ENV
               value: "production"
             - name: DATABASE_URL
               value: "file:/app/data/gatekeeper.db"

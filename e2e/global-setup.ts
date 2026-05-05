@@ -1,16 +1,17 @@
 import { execSync } from 'child_process';
 import path from 'path';
-import fs from 'fs';
 
 /**
  * Playwright 글로벌 셋업 (모든 테스트 실행 전 1회)
  *
- * DLD-827: Forward Auth 기반으로 변경
- *
  * 수행 작업:
- * 1. 테스트 전용 SQLite DB 파일 생성
- * 2. Prisma 마이그레이션 적용
- * 3. 시드 데이터 삽입 (테스트 사용자, 샘플 Request)
+ * 1. Prisma 스키마를 DB에 반영 (idempotent — 기존 파일을 유지하고 스키마 차이만 적용)
+ * 2. 시드 데이터 삽입 (upsert이므로 반복 실행 안전)
+ *
+ * 주의: 절대 DB 파일을 unlink 하지 말 것. Playwright가 webServer(Go 백엔드)와
+ * globalSetup을 병렬로 시작하기 때문에, unlink 후 재생성하면 Go 측이 잡고 있는
+ * 파일 핸들이 stale inode 를 가리키게 되어 Prisma 가 쓴 데이터가 Go 한테는
+ * 보이지 않게 된다.
  */
 
 const testDBPath = path.resolve(__dirname, '..', 'e2e-test.db');
@@ -19,13 +20,8 @@ const testDBUrl = `file:${testDBPath}`;
 async function globalSetup(): Promise<void> {
   console.log('[E2E Setup] 테스트용 DB 초기화 시작...');
 
-  // 이전 테스트 DB가 남아 있으면 삭제
-  if (fs.existsSync(testDBPath)) {
-    fs.unlinkSync(testDBPath);
-    console.log('[E2E Setup] 기존 테스트 DB 삭제 완료');
-  }
-
-  // Prisma 스키마를 DB에 직접 반영 (migrations 디렉토리 불필요)
+  // Prisma 스키마를 DB에 직접 반영 (migrations 디렉토리 불필요).
+  // 이미 동일 스키마가 있으면 no-op.
   console.log('[E2E Setup] Prisma db push 실행 중...');
   try {
     execSync('npx prisma db push --accept-data-loss', {

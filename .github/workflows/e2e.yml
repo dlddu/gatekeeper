@@ -18,13 +18,30 @@ jobs:
           node-version: '20'
           cache: 'npm'
 
+      - uses: actions/setup-go@v5
+        with:
+          go-version: '1.24'
+          cache-dependency-path: backend/go.sum
+
       - name: Install dependencies
         run: npm ci
 
+      # Playwright webServer가 실행할 Go 백엔드 바이너리 빌드
+      - name: Build Go backend
+        working-directory: backend
+        run: go build -o gatekeeper-e2e .
+
+      # Prisma 클라이언트 (e2e/global-setup의 시드 삽입에서 사용)
       - name: Generate Prisma Client
         run: npx prisma generate
         env:
           DATABASE_URL: file:./e2e-test.db
+
+      # Next.js 정적 export — Go 가 out/ 을 그대로 서빙
+      - name: Build Next.js static export
+        run: npm run build
+        env:
+          NEXT_PUBLIC_VAPID_PUBLIC_KEY: ${{ secrets.E2E_VAPID_PUBLIC_KEY || 'BEl62iUYgUivxIkv69yViEuiBIa-Ib9-SkvMeAtA3LFgDzkrxZJjSgSnfckjBJuBkr3qBUYIHBQFLXYp5Nksh8U' }}
 
       # Playwright 브라우저 캐시 (CI 빌드 시간 단축)
       - name: Get Playwright version
@@ -48,16 +65,6 @@ jobs:
       - name: Install Playwright system dependencies
         if: steps.playwright-cache.outputs.cache-hit == 'true'
         run: npx playwright install-deps chromium
-
-      # Next.js 프로덕션 빌드 (webServer 설정에서 `npm run start` 사용)
-      - name: Build Next.js application
-        run: npm run build
-        env:
-          DATABASE_URL: file:./e2e-test.db
-          NEXT_PUBLIC_VAPID_PUBLIC_KEY: ${{ secrets.E2E_VAPID_PUBLIC_KEY || 'BEl62iUYgUivxIkv69yViEuiBIa-Ib9-SkvMeAtA3LFgDzkrxZJjSgSnfckjBJuBkr3qBUYIHBQFLXYp5Nksh8U' }}
-          VAPID_PUBLIC_KEY: ${{ secrets.E2E_VAPID_PUBLIC_KEY || 'BEl62iUYgUivxIkv69yViEuiBIa-Ib9-SkvMeAtA3LFgDzkrxZJjSgSnfckjBJuBkr3qBUYIHBQFLXYp5Nksh8U' }}
-          VAPID_PRIVATE_KEY: ${{ secrets.E2E_VAPID_PRIVATE_KEY || 'UUxI4O8-HoGs86_GBRhFxGMpHMTKJmEXAZMFnTa5YCc' }}
-          VAPID_SUBJECT: ${{ secrets.E2E_VAPID_SUBJECT || 'mailto:e2e-test@example.com' }}
 
       - name: Run E2E tests
         run: npm run test:e2e

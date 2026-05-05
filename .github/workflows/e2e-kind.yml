@@ -47,17 +47,13 @@ jobs:
           kubectl apply -f k8s/pvc.yaml
           kubectl apply -f k8s/service.yaml
 
-          # 로컬 이미지 사용하도록 deployment 수정 후 배포
-          sed 's|ghcr.io/dlddu/gatekeeper:latest|gatekeeper:e2e|g' k8s/deployment.yaml \
-            | kubectl apply -f -
-
-          # Kind에서 로컬 이미지를 사용하므로 imagePullPolicy를 Never로 설정하고 API_SECRET_KEY 추가
-          kubectl patch deployment gatekeeper --type=json \
-            -p='[
-              {"op":"replace","path":"/spec/template/spec/initContainers/0/imagePullPolicy","value":"Never"},
-              {"op":"replace","path":"/spec/template/spec/containers/0/imagePullPolicy","value":"Never"},
-              {"op":"add","path":"/spec/template/spec/containers/0/env/-","value":{"name":"API_SECRET_KEY","valueFrom":{"secretKeyRef":{"name":"gatekeeper-secrets","key":"API_SECRET_KEY"}}}}
-            ]'
+          # image 치환 + imagePullPolicy 삽입을 한 번의 apply 로 처리.
+          # apply 후 patch 로 template 을 또 수정하면 rolling update 가
+          # 한 번 더 발생해 terminating/new pod 가 동시에 ready 라벨에
+          # 매치, 후속 kubectl wait 가 timeout 된다.
+          sed -e 's|ghcr.io/dlddu/gatekeeper:latest|gatekeeper:e2e|g' \
+              -e '/image: gatekeeper:e2e/a\          imagePullPolicy: Never' \
+              k8s/deployment.yaml | kubectl apply -f -
 
       # 배포 전 상태 확인
       - name: Debug pre-rollout state
@@ -81,11 +77,7 @@ jobs:
             }
             echo "--- Attempt $i/36 ---"
             kubectl get pods -l app=gatekeeper -o wide
-            # Init/App 컨테이너 상태 출력
-            kubectl get pods -l app=gatekeeper -o jsonpath='{range .items[*]}{.metadata.name}{" init: "}{range .status.initContainerStatuses[*]}{.name}{"="}{.state}{" "}{end}{" containers: "}{range .status.containerStatuses[*]}{.name}{"="}{.state}{" "}{end}{"\n"}{end}' 2>/dev/null || true
-            # 에러 상태인 경우 로그 조기 출력
-            echo "-- init container logs --"
-            kubectl logs -l app=gatekeeper -c prisma-migrate --tail=50 --ignore-errors 2>/dev/null || true
+            kubectl get pods -l app=gatekeeper -o jsonpath='{range .items[*]}{.metadata.name}{" containers: "}{range .status.containerStatuses[*]}{.name}{"="}{.state}{" "}{end}{"\n"}{end}' 2>/dev/null || true
             echo "-- app container logs --"
             kubectl logs -l app=gatekeeper -c gatekeeper --tail=20 --ignore-errors 2>/dev/null || true
             sleep 5
@@ -118,12 +110,8 @@ jobs:
           # 최종 헬스 체크
           curl -sf http://localhost:3001/api/health || (echo "Health check failed"; exit 1)
 
-      # Kind E2E 테스트를 위한 admin 사용자 시드
-      - name: Seed admin user for E2E tests
-        run: |
-          POD=$(kubectl get pod -l app=gatekeeper -o jsonpath='{.items[0].metadata.name}')
-          kubectl cp e2e/seed-admin.js $POD:/tmp/seed-admin.js
-          kubectl exec $POD -- env NODE_PATH=/app/node_modules node /tmp/seed-admin.js
+      # Go 백엔드는 forward-auth 헤더(Remote-User) 수신 시 사용자를 자동 생성하므로
+      # 별도의 seed 단계가 필요 없습니다.
 
       # Node.js 및 Playwright 설정
       - uses: actions/setup-node@v4
@@ -176,9 +164,6 @@ jobs:
           echo ""
           echo "=== Pod Describe ==="
           kubectl describe pods -l app=gatekeeper
-          echo ""
-          echo "=== Init Container Logs (full) ==="
-          kubectl logs -l app=gatekeeper -c prisma-migrate --ignore-errors 2>&1 || true
           echo ""
           echo "=== App Container Logs (full) ==="
           kubectl logs -l app=gatekeeper -c gatekeeper --ignore-errors 2>&1 || true

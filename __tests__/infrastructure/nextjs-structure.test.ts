@@ -85,14 +85,20 @@ describe('Next.js 15 project structure', () => {
       expect(deps['jose']).toBeUndefined();
     });
 
-    it('should have prisma as a dependency', () => {
-      const deps = pkg.dependencies as Record<string, string>;
-      expect(deps['prisma']).toBeDefined();
+    it('should have prisma as a devDependency (e2e seeding only — backend is Go)', () => {
+      const devDeps = pkg.devDependencies as Record<string, string>;
+      expect(devDeps['prisma']).toBeDefined();
     });
 
-    it('should have @prisma/client as a dependency', () => {
-      const deps = pkg.dependencies as Record<string, string>;
-      expect(deps['@prisma/client']).toBeDefined();
+    it('should have @prisma/client as a devDependency (e2e seeding only — backend is Go)', () => {
+      const devDeps = pkg.devDependencies as Record<string, string>;
+      expect(devDeps['@prisma/client']).toBeDefined();
+    });
+
+    it('should NOT have prisma in production dependencies (backend is Go)', () => {
+      const deps = (pkg.dependencies as Record<string, string>) ?? {};
+      expect(deps['prisma']).toBeUndefined();
+      expect(deps['@prisma/client']).toBeUndefined();
     });
 
     it('should NOT have bcryptjs as a dependency (removed with password auth in Forward Auth migration)', () => {
@@ -183,23 +189,25 @@ describe('Next.js 15 project structure', () => {
   });
 
   // ----------------------------------------------------------------
-  // lib/ 디렉토리
+  // backend/ 디렉토리 (Go 백엔드 마이그레이션 이후 추가)
   // ----------------------------------------------------------------
-  describe('lib/ directory', () => {
-    it('should exist', () => {
-      expect(fs.existsSync(path.join(ROOT, 'lib'))).toBe(true);
+  describe('backend/ directory', () => {
+    it('should exist as a Go module', () => {
+      expect(fs.existsSync(path.join(ROOT, 'backend'))).toBe(true);
+      expect(fs.existsSync(path.join(ROOT, 'backend', 'go.mod'))).toBe(true);
     });
 
-    it('should NOT contain auth.ts (deleted in Forward Auth migration)', () => {
-      expect(fs.existsSync(path.join(ROOT, 'lib', 'auth.ts'))).toBe(false);
+    it('should have main.go entry point', () => {
+      expect(fs.existsSync(path.join(ROOT, 'backend', 'main.go'))).toBe(true);
     });
+  });
 
-    it('should NOT contain oidc.ts (deleted in Forward Auth migration)', () => {
-      expect(fs.existsSync(path.join(ROOT, 'lib', 'oidc.ts'))).toBe(false);
-    });
-
-    it('should contain prisma.ts', () => {
-      expect(fs.existsSync(path.join(ROOT, 'lib', 'prisma.ts'))).toBe(true);
+  // ----------------------------------------------------------------
+  // lib/ 디렉토리는 백엔드 Go 마이그레이션 이후 제거됨
+  // ----------------------------------------------------------------
+  describe('lib/ directory (removed in Go backend migration)', () => {
+    it('should NOT exist (backend logic moved to Go)', () => {
+      expect(fs.existsSync(path.join(ROOT, 'lib'))).toBe(false);
     });
   });
 });

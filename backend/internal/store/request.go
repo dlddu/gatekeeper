@@ -83,10 +83,10 @@ func (s *RequestStore) Create(ctx context.Context, in CreateRequestInput) (*mode
 		timeoutArg = *in.TimeoutSeconds
 	}
 	if in.ExpiresAt != nil {
-		expiresAtArg = *in.ExpiresAt
+		expiresAtArg = util.DBTime(*in.ExpiresAt)
 	}
 	if in.ProcessedAt != nil {
-		processedAt = *in.ProcessedAt
+		processedAt = util.DBTime(*in.ProcessedAt)
 	}
 	if in.ProcessedByID != nil {
 		processedByID = *in.ProcessedByID
@@ -95,7 +95,7 @@ func (s *RequestStore) Create(ctx context.Context, in CreateRequestInput) (*mode
 	_, err := s.db.ExecContext(ctx, `
 		INSERT INTO "Request" (id, externalId, context, requesterName, status, timeoutSeconds, expiresAt, createdAt, updatedAt, processedAt, processedById)
 		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-	`, id, in.ExternalID, in.Context, in.RequesterName, string(status), timeoutArg, expiresAtArg, now, now, processedAt, processedByID)
+	`, id, in.ExternalID, in.Context, in.RequesterName, string(status), timeoutArg, expiresAtArg, util.DBTime(now), util.DBTime(now), processedAt, processedByID)
 	if err != nil {
 		if isUniqueViolation(err) {
 			return nil, ErrUniqueViolation
@@ -184,7 +184,7 @@ func (s *RequestStore) ListPending(ctx context.Context) ([]*models.Request, erro
 
 func (s *RequestStore) UpdateStatus(ctx context.Context, id string, status models.RequestStatus) (*models.Request, error) {
 	now := time.Now().UTC()
-	_, err := s.db.ExecContext(ctx, `UPDATE "Request" SET status = ?, updatedAt = ? WHERE id = ?`, string(status), now, id)
+	_, err := s.db.ExecContext(ctx, `UPDATE "Request" SET status = ?, updatedAt = ? WHERE id = ?`, string(status), util.DBTime(now), id)
 	if err != nil {
 		return nil, fmt.Errorf("update request status: %w", err)
 	}
@@ -193,9 +193,10 @@ func (s *RequestStore) UpdateStatus(ctx context.Context, id string, status model
 
 func (s *RequestStore) Process(ctx context.Context, id string, status models.RequestStatus, processedByID string) (*models.Request, error) {
 	now := time.Now().UTC()
+	nowStr := util.DBTime(now)
 	_, err := s.db.ExecContext(ctx, `
 		UPDATE "Request" SET status = ?, processedAt = ?, processedById = ?, updatedAt = ? WHERE id = ?
-	`, string(status), now, processedByID, now, id)
+	`, string(status), nowStr, processedByID, nowStr, id)
 	if err != nil {
 		return nil, fmt.Errorf("process request: %w", err)
 	}

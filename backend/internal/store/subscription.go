@@ -62,7 +62,7 @@ func (s *PushSubscriptionStore) Create(ctx context.Context, userID, endpoint, p2
 	_, err := s.db.ExecContext(ctx, `
 		INSERT INTO "PushSubscription" (id, userId, endpoint, p256dh, auth, createdAt)
 		VALUES (?, ?, ?, ?, ?, ?)
-	`, id, userID, endpoint, p256dh, auth, now)
+	`, id, userID, endpoint, p256dh, auth, util.DBTime(now))
 	if err != nil {
 		return nil, fmt.Errorf("create subscription: %w", err)
 	}

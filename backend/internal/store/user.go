@@ -83,7 +83,7 @@ func (s *UserStore) Create(ctx context.Context, u *models.User) error {
 	_, err := s.db.ExecContext(ctx, `
 		INSERT INTO "User" (id, username, email, autheliaId, displayName, autoResponseMode, createdAt, updatedAt)
 		VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-	`, u.ID, u.Username, email, u.AutheliaID, u.DisplayName, string(u.AutoResponseMode), u.CreatedAt, u.UpdatedAt)
+	`, u.ID, u.Username, email, u.AutheliaID, u.DisplayName, string(u.AutoResponseMode), util.DBTime(u.CreatedAt), util.DBTime(u.UpdatedAt))
 	if err != nil {
 		return fmt.Errorf("create user: %w", err)
 	}
@@ -100,7 +100,7 @@ func (s *UserStore) UpdateProfileByAutheliaID(ctx context.Context, autheliaID st
 	now := time.Now().UTC()
 	_, err := s.db.ExecContext(ctx, `
 		UPDATE "User" SET email = ?, displayName = ?, updatedAt = ? WHERE autheliaId = ?
-	`, emailArg, displayName, now, autheliaID)
+	`, emailArg, displayName, util.DBTime(now), autheliaID)
 	if err != nil {
 		return nil, fmt.Errorf("update profile: %w", err)
 	}
@@ -118,7 +118,7 @@ func (s *UserStore) UpgradeLegacyByUsername(ctx context.Context, username, authe
 	now := time.Now().UTC()
 	_, err := s.db.ExecContext(ctx, `
 		UPDATE "User" SET autheliaId = ?, email = ?, displayName = ?, updatedAt = ? WHERE username = ?
-	`, autheliaID, emailArg, displayName, now, username)
+	`, autheliaID, emailArg, displayName, util.DBTime(now), username)
 	if err != nil {
 		return nil, fmt.Errorf("upgrade legacy user: %w", err)
 	}
@@ -129,7 +129,7 @@ func (s *UserStore) UpdateAutoResponseMode(ctx context.Context, id string, mode 
 	now := time.Now().UTC()
 	_, err := s.db.ExecContext(ctx, `
 		UPDATE "User" SET autoResponseMode = ?, updatedAt = ? WHERE id = ?
-	`, string(mode), now, id)
+	`, string(mode), util.DBTime(now), id)
 	if err != nil {
 		return nil, fmt.Errorf("update auto response mode: %w", err)
 	}
